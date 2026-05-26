@@ -1,0 +1,171 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Search, SlidersHorizontal } from "lucide-react";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { ProductGrid } from "@/components/product/ProductGrid";
+import { ProductCardSkeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import api from "@/lib/api";
+import { useCartStore } from "@/stores/cartStore";
+
+export default function HomePage() {
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [sort, setSort] = useState("newest");
+  const syncWithServer = useCartStore((state) => state.syncWithServer);
+
+  useEffect(() => {
+    syncWithServer();
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [selectedCategory, sort]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedCategory) params.set("category", selectedCategory);
+      if (sort) params.set("sort", sort);
+      const { data } = await api.get(`/products?${params}`);
+      setProducts(data.data?.products || []);
+    } catch {
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const { data } = await api.get("/categories");
+      setCategories(data.data || []);
+    } catch {
+      setCategories([]);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!search.trim()) {
+      fetchProducts();
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data } = await api.get(`/products/search?q=${search}`);
+      setProducts(data.data || []);
+    } catch {
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <Navbar />
+      <main className="flex-1">
+        {/* Hero */}
+        <section className="bg-gradient-to-r from-primary-600 to-primary-800 text-white py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 className="text-4xl font-bold mb-4">Fresh Groceries Delivered in Minutes</h1>
+            <p className="text-lg text-primary-100 mb-6">Shop from thousands of products at your fingertips</p>
+            <div className="flex max-w-lg">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="w-full pl-10 pr-4 py-3 rounded-l-lg text-gray-900 focus:outline-none"
+                />
+              </div>
+              <Button onClick={handleSearch} className="rounded-l-none bg-white text-primary-700 hover:bg-gray-100">
+                Search
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Sidebar Filters */}
+            <aside className="w-full md:w-56 flex-shrink-0">
+              <div className="bg-white rounded-xl border p-4 sticky top-20">
+                <div className="flex items-center space-x-2 mb-4">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  <h3 className="font-semibold">Filters</h3>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Category</h4>
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => setSelectedCategory("")}
+                        className={`block w-full text-left px-3 py-1.5 text-sm rounded-lg ${!selectedCategory ? "bg-primary-50 text-primary-700" : "text-gray-600 hover:bg-gray-50"}`}
+                      >
+                        All
+                      </button>
+                      {categories.map((cat: any) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setSelectedCategory(cat.slug)}
+                          className={`block w-full text-left px-3 py-1.5 text-sm rounded-lg ${selectedCategory === cat.slug ? "bg-primary-50 text-primary-700" : "text-gray-600 hover:bg-gray-50"}`}
+                        >
+                          {cat.name} ({cat._count?.products || 0})
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Sort By</h4>
+                    <select
+                      value={sort}
+                      onChange={(e) => setSort(e.target.value)}
+                      className="w-full text-sm border rounded-lg px-3 py-2"
+                    >
+                      <option value="newest">Newest</option>
+                      <option value="price_asc">Price: Low to High</option>
+                      <option value="price_desc">Price: High to Low</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </aside>
+
+            {/* Product Grid */}
+            <div className="flex-1">
+              {loading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <ProductCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p className="text-lg">No products found</p>
+                </div>
+              ) : (
+                <ProductGrid products={products} />
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
+}
