@@ -19,6 +19,40 @@ export const listCategories = async (_req: Request, res: Response) => {
   }
 };
 
+export const getPopularCategories = async (_req: Request, res: Response) => {
+  try {
+    // Get popular categories based on product count and activity
+    const popularCategories = await prisma.category.findMany({
+      where: { isActive: true },
+      take: 8,
+      orderBy: {
+        products: {
+          _count: "desc",
+        },
+      },
+      include: {
+        _count: {
+          select: { products: true },
+        },
+      },
+    });
+
+    // If no categories with products found, fall back to all active categories
+    const categoriesToReturn = popularCategories.length > 0
+      ? popularCategories
+      : await prisma.category.findMany({
+          where: { isActive: true },
+          take: 8,
+          orderBy: { sortOrder: "asc" },
+        });
+
+    return successResponse(res, categoriesToReturn);
+  } catch (error) {
+    console.error("Get popular categories error:", error);
+    return errorResponse(res, "Failed to get popular categories", 500);
+  }
+};
+
 export const createCategory = async (req: Request, res: Response) => {
   try {
     const { name, description, imageUrl, parentId, sortOrder } = req.body;

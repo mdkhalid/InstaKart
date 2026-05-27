@@ -120,8 +120,8 @@ export const refresh = async (req: Request, res: Response) => {
       return errorResponse(res, "Refresh token expired or revoked", 401);
     }
 
-    // Delete old token
-    await prisma.refreshToken.delete({ where: { id: storedToken.id } });
+    // Delete old token (use deleteMany to avoid error if record doesn't exist)
+    await prisma.refreshToken.deleteMany({ where: { id: storedToken.id } });
 
     const newAccessToken = signAccessToken(payload.userId, storedToken.user.role);
     const newRefreshToken = signRefreshToken(payload.userId);

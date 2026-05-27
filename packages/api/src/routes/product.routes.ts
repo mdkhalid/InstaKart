@@ -6,6 +6,7 @@ import { createProductSchema, updateProductSchema } from "../validators/product.
 import {
   listProducts, getFeatured, searchProducts, getProduct,
   createProduct, updateProduct, deleteProduct, uploadProductImages, deleteProductImage,
+  getTrendingProducts,
 } from "../controllers/product.controller";
 
 const router = Router();
@@ -14,6 +15,7 @@ const router = Router();
 router.get("/", listProducts);
 router.get("/featured", getFeatured);
 router.get("/search", searchProducts);
+router.get("/trending", getTrendingProducts);
 router.get("/:slug", getProduct);
 
 // Admin routes

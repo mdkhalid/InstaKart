@@ -71,6 +71,72 @@ export const listProducts = async (req: Request, res: Response) => {
   }
 };
 
+export const getTrendingProducts = async (req: Request, res: Response) => {
+  try {
+    // Get trending products based on recent order activity (last 7 days)
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const trendingProducts = await prisma.product.findMany({
+      where: {
+        isActive: true,
+        isAvailable: true,
+        orderItems: {
+          some: {
+            order: {
+              createdAt: {
+                gte: oneWeekAgo,
+              },
+              status: {
+                in: ["CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY", "DELIVERED"],
+              },
+            },
+          },
+        },
+      },
+      take: 10,
+      orderBy: {
+        orderItems: {
+          _count: "desc",
+        },
+      },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+        images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
+      },
+    });
+
+    // If no trending products found, fall back to featured or newest products
+    const productsToReturn = trendingProducts.length > 0 
+      ? trendingProducts 
+      : await prisma.product.findMany({
+          where: {
+            isActive: true,
+            isAvailable: true,
+          },
+          take: 10,
+          orderBy: {
+            createdAt: "desc",
+          },
+          include: {
+            category: { select: { id: true, name: true, slug: true } },
+            images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
+          },
+        });
+
+    const enriched = productsToReturn.map((p) => ({
+      ...p,
+      price: Number(p.price),
+      salePrice: p.salePrice ? Number(p.salePrice) : null,
+    }));
+
+    return successResponse(res, enriched);
+  } catch (error) {
+    console.error("Get trending products error:", error);
+    return errorResponse(res, "Failed to get trending products", 500);
+  }
+};
+
 export const getFeatured = async (req: Request, res: Response) => {
   try {
     const products = await prisma.product.findMany({

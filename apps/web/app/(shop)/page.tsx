@@ -18,6 +18,8 @@ export default function HomePage() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [sort, setSort] = useState("newest");
+  const [trendingProducts, setTrendingProducts] = useState([]);
+  const [popularCategories, setPopularCategories] = useState([]);
   const syncWithServer = useCartStore((state) => state.syncWithServer);
 
   useEffect(() => {
@@ -25,12 +27,14 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    fetchProducts();
-  }, [selectedCategory, sort]);
+    fetchCategories();
+    fetchPopularCategories();
+    fetchTrendingProducts();
+  }, []);
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    fetchProducts();
+  }, [selectedCategory, sort]);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -47,14 +51,35 @@ export default function HomePage() {
     }
   };
 
-  const fetchCategories = async () => {
+  const fetchTrendingProducts = async () => {
     try {
-      const { data } = await api.get("/categories");
-      setCategories(data.data || []);
+      const { data } = await api.get("/products/trending");
+      setTrendingProducts(data.data || []);
     } catch {
-      setCategories([]);
+      // Fallback to random products if API fails
+      setTrendingProducts([]);
     }
   };
+
+   const fetchPopularCategories = async () => {
+     try {
+       const { data } = await api.get("/categories/popular");
+       setPopularCategories(data.data || []);
+     } catch {
+       // Fallback to all categories if API fails
+       setPopularCategories([]);
+     }
+   };
+
+   const fetchCategories = async () => {
+     try {
+       const { data } = await api.get("/categories");
+       setCategories(data.data || []);
+     } catch {
+       // Fallback to empty array if API fails
+       setCategories([]);
+     }
+   };
 
   const handleSearch = async () => {
     if (!search.trim()) {
@@ -99,6 +124,90 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Trending Products Section */}
+        {!loading && trendingProducts.length > 0 && (
+          <section className="py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold">🔥 Trending Now</h2>
+                <p className="text-sm text-gray-500 mt-1">What's hot right now</p>
+              </div>
+              <div className="overflow-x-auto">
+                <div className="inline-flex space-x-4">
+                  {trendingProducts.map((product: any) => (
+                    <div key={product.id} className="flex-shrink-0 w-64">
+                      <div className="bg-white rounded-xl border p-4 hover:shadow-lg transition-shadow">
+                        <div className="relative">
+                          <span className="absolute top-2 right-2 bg-primary-500 text-white text-xs px-2 py-1 rounded">Trending</span>
+                          <img 
+                            src={product.image || '/placeholder.svg'} 
+                            alt={product.name} 
+                            className="w-full h-48 object-cover rounded-lg mb-3"
+                          />
+                        </div>
+                        <h3 className="font-semibold text-gray-900 line-clamp-2">{product.name}</h3>
+                        <p className="mt-2">
+                          <span className="font-medium text-red-600">₹{product.price.toFixed(2)}</span>
+                          {product.originalPrice && (
+                            <span className="ml-2 text-gray-400 line-through">₹{product.originalPrice.toFixed(2)}</span>
+                          )}
+                        </p>
+                        <div className="mt-3 flex items-center">
+                          <div className="flex items-center space-x-1 text-yellow-400 text-xs">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <span key={star}>{star <= (product.rating || 0) ? '★' : '☆'}</span>
+                            ))}
+                          </div>
+                          <span className="ml-2 text-gray-500 text-xs">({product.reviewsCount || 0})</span>
+                        </div>
+                        <Button 
+                          onClick={() => console.log(`Add ${product.name} to cart`)}
+                          className="w-full mt-2 bg-primary-600 text-white hover:bg-primary-700"
+                        >
+                          Add to Cart
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Popular Categories Section */}
+        {!loading && popularCategories.length > 0 && (
+          <section className="py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold">🛒 Shop by Category</h2>
+                <p className="text-sm text-gray-500 mt-1">Explore our most popular sections</p>
+              </div>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {popularCategories.map((category: any) => (
+                  <div 
+                    key={category.id} 
+                    onClick={() => setSelectedCategory(category.slug)}
+                    className="group relative cursor-pointer hover:shadow-lg transition-shadow"
+                  >
+                    <div className="aspect-w-16 aspect-h-9 overflow-hidden rounded-xl bg-gray-50">
+                      <img 
+                        src={category.image || '/placeholder.svg'} 
+                        alt={category.name} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-30 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <h3 className="text-lg font-semibold">{category.name}</h3>
+                        <p className="text-sm mt-1">{category.productsCount || 0}+ products</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row gap-8">
