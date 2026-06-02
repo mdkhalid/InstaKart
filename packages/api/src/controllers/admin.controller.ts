@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import bcrypt from "bcrypt";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { emitToUser } from "../services/socket.service";
@@ -175,8 +176,8 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
       return errorResponse(res, `Cannot transition from ${order.status} to ${status}`, 400);
     }
 
-    // Handle refund - restore stock
-    if (status === "REFUNDED") {
+    // Handle refund or cancellation - restore stock
+    if (status === "REFUNDED" || status === "CANCELLED") {
       const items = await prisma.orderItem.findMany({ where: { orderId: id } });
       for (const item of items) {
         await prisma.product.update({
@@ -227,6 +228,38 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Update order status error:", error);
     return errorResponse(res, "Failed to update order status", 500);
+  }
+};
+
+// Get single order detail
+export const getOrderDetail = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+        address: true,
+        items: true,
+        statusHistory: { orderBy: { createdAt: "asc" } },
+      },
+    });
+
+    if (!order) return errorResponse(res, "Order not found", 404);
+
+    return successResponse(res, {
+      ...order,
+      subtotal: Number(order.subtotal),
+      deliveryFee: Number(order.deliveryFee),
+      discount: Number(order.discount),
+      tax: Number(order.tax),
+      total: Number(order.total),
+      items: order.items.map((i) => ({ ...i, unitPrice: Number(i.unitPrice), totalPrice: Number(i.totalPrice) })),
+    });
+  } catch (error) {
+    console.error("Get order detail error:", error);
+    return errorResponse(res, "Failed to get order", 500);
   }
 };
 
@@ -348,5 +381,73 @@ export const deleteUser = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Delete user error:", error);
     return errorResponse(res, "Failed to deactivate user", 500);
+  }
+};
+
+export const updateUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { firstName, lastName, phone, email } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+    if (!user) return errorResponse(res, "User not found", 404);
+
+    const data: any = {};
+    if (firstName !== undefined) data.firstName = firstName;
+    if (lastName !== undefined) data.lastName = lastName;
+    if (phone !== undefined) data.phone = phone;
+    if (email !== undefined) {
+      // Check email uniqueness
+      const existing = await prisma.user.findFirst({ where: { email, NOT: { id } } });
+      if (existing) return errorResponse(res, "Email already in use", 409);
+      data.email = email;
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data,
+      select: {
+        id: true, email: true, firstName: true, lastName: true, phone: true,
+        role: true, isActive: true, isEmailVerified: true, avatarUrl: true,
+        createdAt: true, updatedAt: true,
+      },
+    });
+
+    return successResponse(res, updated, "User updated");
+  } catch (error) {
+    console.error("Update user error:", error);
+    return errorResponse(res, "Failed to update user", 500);
+  }
+};
+
+export const resetUserPassword = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 8) {
+      return errorResponse(res, "Password must be at least 8 characters", 400);
+    }
+
+    const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+    if (!user) return errorResponse(res, "User not found", 404);
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    // Use transaction to update password and invalidate all refresh tokens
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id },
+        data: { passwordHash },
+      }),
+      prisma.refreshToken.deleteMany({
+        where: { userId: id },
+      }),
+    ]);
+
+    return successResponse(res, null, "Password reset successful");
+  } catch (error) {
+    console.error("Reset user password error:", error);
+    return errorResponse(res, "Failed to reset password", 500);
   }
 };

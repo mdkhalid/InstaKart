@@ -10,7 +10,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
+    const token = localStorage.getItem("accessToken");
     if (!token && !pathname.includes("/login")) {
       router.push("/login");
     }

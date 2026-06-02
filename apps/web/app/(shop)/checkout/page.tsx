@@ -14,7 +14,7 @@ import toast from "react-hot-toast";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, total, itemCount, clearCart } = useCartStore();
+  const { items, total, itemCount, clearCart, validateStock } = useCartStore();
   const user = useAuthStore((state) => state.user);
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState("");
@@ -22,6 +22,7 @@ export default function CheckoutPage() {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [placing, setPlacing] = useState(false);
+  const [stockValidated, setStockValidated] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -33,6 +34,20 @@ export default function CheckoutPage() {
       return;
     }
     fetchAddresses();
+    // Validate stock freshness before showing checkout
+    validateStock().then((issues) => {
+      if (issues.length > 0) {
+        const outOfStock = issues.filter((i) => i.type === 'out_of_stock');
+        const reduced = issues.filter((i) => i.type === 'reduced_stock');
+        if (outOfStock.length > 0) {
+          toast.error(`${outOfStock.map((i) => i.name).join(', ')} ${outOfStock.length === 1 ? 'is' : 'are'} out of stock and have been removed`);
+        }
+        if (reduced.length > 0) {
+          toast(`${reduced.map((i) => i.name).join(', ')} ${reduced.length === 1 ? 'has' : 'have'} reduced stock — quantity adjusted`, { icon: '⚠️' });
+        }
+      }
+      setStockValidated(true);
+    });
   }, [user, items]);
 
   const fetchAddresses = async () => {

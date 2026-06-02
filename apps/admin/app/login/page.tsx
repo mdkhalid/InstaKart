@@ -22,7 +22,7 @@ export default function AdminLoginPage() {
         setLoading(false);
         return;
       }
-      localStorage.setItem("adminToken", data.data.accessToken);
+      localStorage.setItem("accessToken", data.data.accessToken);
       localStorage.setItem("adminUser", JSON.stringify(data.data.user));
       toast.success("Welcome Admin!");
       router.push("/dashboard");

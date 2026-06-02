@@ -9,7 +9,9 @@ import { ProductCardSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import api from "@/lib/api";
+import { useCart } from "@/hooks/useCart";
 import { useCartStore } from "@/stores/cartStore";
+import toast from "react-hot-toast";
 
 export default function HomePage() {
   const [products, setProducts] = useState([]);
@@ -20,6 +22,7 @@ export default function HomePage() {
   const [sort, setSort] = useState("newest");
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [popularCategories, setPopularCategories] = useState([]);
+  const { addItem } = useCart();
   const syncWithServer = useCartStore((state) => state.syncWithServer);
 
   useEffect(() => {
@@ -141,7 +144,7 @@ export default function HomePage() {
                         <div className="relative">
                           <span className="absolute top-2 right-2 bg-primary-500 text-white text-xs px-2 py-1 rounded">Trending</span>
                           <img 
-                            src={product.image || '/placeholder.svg'} 
+                            src={product.images?.[0]?.url || '/placeholder.svg'} 
                             alt={product.name} 
                             className="w-full h-48 object-cover rounded-lg mb-3"
                           />
@@ -162,8 +165,16 @@ export default function HomePage() {
                           <span className="ml-2 text-gray-500 text-xs">({product.reviewsCount || 0})</span>
                         </div>
                         <Button 
-                          onClick={() => console.log(`Add ${product.name} to cart`)}
+                          onClick={() => {
+                            if (!product.isAvailable || product.stock <= 0) {
+                              toast.error(`${product.name} is out of stock`);
+                              return;
+                            }
+                            addItem(product);
+                            toast.success(`${product.name} added to cart`);
+                          }}
                           className="w-full mt-2 bg-primary-600 text-white hover:bg-primary-700"
+                          disabled={!product.isAvailable || product.stock <= 0}
                         >
                           Add to Cart
                         </Button>
@@ -193,7 +204,7 @@ export default function HomePage() {
                   >
                     <div className="aspect-w-16 aspect-h-9 overflow-hidden rounded-xl bg-gray-50">
                       <img 
-                        src={category.image || '/placeholder.svg'} 
+                        src={category.imageUrl || '/placeholder.svg'} 
                         alt={category.name} 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />

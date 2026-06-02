@@ -7,7 +7,7 @@ export default function AdminRootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
+    const token = localStorage.getItem("accessToken");
     if (token) {
       router.push("/dashboard");
     } else {

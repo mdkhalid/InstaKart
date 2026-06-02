@@ -2,18 +2,27 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, User, LogOut, Package, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { ShoppingCart, User, LogOut, Package, Menu, X, Heart } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
+import { useWishlistStore } from "@/stores/wishlistStore";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 
 export function Navbar() {
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
   const { itemCount, toggleCart } = useCart();
+  const wishlistCount = useWishlistStore((s) => s.itemIds.size);
+  const fetchWishlist = useWishlistStore((s) => s.fetchWishlist);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchWishlist();
+    }
+  }, [isAuthenticated]);
 
   const handleLogout = async () => {
     await logout();
@@ -36,6 +45,14 @@ export function Navbar() {
               </Link>
               {isAuthenticated ? (
                 <>
+                  <Link href="/wishlist" className="relative p-2 text-gray-600 hover:text-gray-900">
+                    <Heart className="h-6 w-6" />
+                    {wishlistCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {wishlistCount}
+                      </span>
+                    )}
+                  </Link>
                   <Link href="/orders" className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium">
                     Orders
                   </Link>

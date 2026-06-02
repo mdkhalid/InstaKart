@@ -58,6 +58,7 @@ model User {
   addresses        Address[]
   orders           Order[]
   cart             Cart?
+  wishlist         Wishlist?
   refreshTokens    RefreshToken[]
   passwordResets   PasswordReset[]
 
@@ -153,9 +154,30 @@ model Product {
 
   cartItems     CartItem[]
   orderItems    OrderItem[]
+  wishlistItems WishlistItem[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model Wishlist {
+  id        String         @id @default(cuid())
+  userId    String         @unique
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     WishlistItem[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model WishlistItem {
+  id         String   @id @default(cuid())
+  wishlistId String
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([wishlistId, productId])
 }
 
 model ProductImage {
@@ -245,6 +267,12 @@ model OrderStatusHistory {
   status    OrderStatus
   note      String?
   createdAt DateTime    @default(now())
+}
+
+model OrderCounter {
+  id        String @id @default(cuid())
+  year      Int    @unique
+  lastValue Int    @default(0)
 }
 
 model Coupon {

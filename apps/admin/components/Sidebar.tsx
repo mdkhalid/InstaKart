@@ -26,7 +26,7 @@ export function Sidebar() {
   const router = useRouter();
 
   const handleLogout = () => {
-    localStorage.removeItem("adminToken");
+    localStorage.removeItem("accessToken");
     localStorage.removeItem("adminUser");
     router.push("/login");
   };

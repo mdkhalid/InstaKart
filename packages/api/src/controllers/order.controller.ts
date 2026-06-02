@@ -79,16 +79,22 @@ export const createOrder = async (req: Request, res: Response) => {
     const tax = (subtotal - discount) * TAX_RATE;
     const total = subtotal + deliveryFee - discount + tax;
 
-    // Generate order number
+    // Generate order number using atomic counter (prevents race condition)
     const year = new Date().getFullYear();
-    const count = await prisma.order.count();
-    const orderNumber = `IM-${year}-${String(count + 1).padStart(5, "0")}`;
 
     // Calculate estimated delivery (40 min from now)
     const estimatedDelivery = new Date(Date.now() + 40 * 60 * 1000);
 
     // Create order in transaction
     const order = await prisma.$transaction(async (tx) => {
+      // Atomically increment the order counter
+      const counter = await tx.orderCounter.upsert({
+        where: { year },
+        update: { lastValue: { increment: 1 } },
+        create: { year, lastValue: 1 },
+      });
+      const orderNumber = `IM-${year}-${String(counter.lastValue).padStart(5, "0")}`;
+
       // Decrement stock
       for (const item of cart.items) {
         await tx.product.update({
@@ -153,7 +159,7 @@ export const createOrder = async (req: Request, res: Response) => {
       sendOrderConfirmationEmail(
         user.email,
         user.firstName,
-        orderNumber,
+        order.orderNumber,
         orderItems.map((i: any) => ({ name: i.productName, quantity: i.quantity, price: Number(i.unitPrice) })),
         Number(total),
         estimatedDelivery.toISOString()

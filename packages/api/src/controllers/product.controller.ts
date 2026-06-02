@@ -4,6 +4,30 @@ import { successResponse, errorResponse } from "../utils/response";
 import { uploadImage, deleteImage } from "../services/upload.service";
 
 // Public routes
+export const checkStock = async (req: Request, res: Response) => {
+  try {
+    const { productIds } = req.body;
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      return successResponse(res, {});
+    }
+
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, stock: true, isAvailable: true },
+    });
+
+    const stockMap: Record<string, { stock: number; isAvailable: boolean }> = {};
+    for (const p of products) {
+      stockMap[p.id] = { stock: p.stock, isAvailable: p.isAvailable };
+    }
+
+    return successResponse(res, stockMap);
+  } catch (error) {
+    console.error("Check stock error:", error);
+    return errorResponse(res, "Failed to check stock", 500);
+  }
+};
+
 export const listProducts = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;

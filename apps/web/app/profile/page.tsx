@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { User, Mail, Phone, MapPin, Plus, Edit2, Trash2 } from "lucide-react";
+import { User, Mail, Phone, MapPin, Plus, Edit2, Trash2, Lock, Camera } from "lucide-react";
+import Image from "next/image";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,17 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState(user?.phone || "");
   const [saving, setSaving] = useState(false);
   const [addresses, setAddresses] = useState([]);
+
+  // Change password state
+  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPwd, setChangingPwd] = useState(false);
+
+  // Avatar upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressForm, setAddressForm] = useState({
     label: "Home", street: "", city: "", state: "", pincode: "", isDefault: false,
@@ -86,6 +98,55 @@ export default function ProfilePage() {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (!currentPassword) { toast.error("Current password is required"); return; }
+    if (newPassword.length < 8) { toast.error("New password must be at least 8 characters"); return; }
+    if (newPassword !== confirmPassword) { toast.error("Passwords don't match"); return; }
+    if (currentPassword === newPassword) { toast.error("New password must be different from current"); return; }
+
+    setChangingPwd(true);
+    try {
+      await api.put("/users/change-password", { currentPassword, newPassword });
+      toast.success("Password changed successfully");
+      setShowChangePwd(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to change password");
+    } finally {
+      setChangingPwd(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large. Max 5MB");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    setUploadingAvatar(true);
+    try {
+      const { data } = await api.post("/users/avatar", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (data.data?.avatarUrl) {
+        useAuthStore.getState().setUser({ ...user!, avatarUrl: data.data.avatarUrl });
+      }
+      toast.success("Avatar updated");
+    } catch {
+      toast.error("Failed to upload avatar");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -96,7 +157,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Personal Information</h2>
             <Button variant="outline" size="sm" onClick={() => setEditing(!editing)}>
-              {editing ? "Cancel" : "Edit"}
+              {editing ? "Cancel" : <><Edit2 className="h-4 w-4 mr-1" /> Edit</>}
             </Button>
           </div>
 
@@ -111,9 +172,36 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <User className="h-5 w-5 text-gray-400" />
-                <span>{user?.firstName} {user?.lastName}</span>
+              {/* Avatar */}
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="relative">
+                  <div className="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
+                    {user?.avatarUrl ? (
+                      <Image src={user.avatarUrl} alt="Avatar" width={64} height={64} className="object-cover" />
+                    ) : (
+                      <User className="h-8 w-8 text-primary-600" />
+                    )}
+                  </div>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                    className="absolute -bottom-1 -right-1 p-1.5 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors disabled:opacity-50"
+                    title="Upload avatar"
+                  >
+                    <Camera className="h-3 w-3" />
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
+                  <p className="text-xs text-gray-500">{user?.role}</p>
+                </div>
               </div>
               <div className="flex items-center space-x-3">
                 <Mail className="h-5 w-5 text-gray-400" />
@@ -125,6 +213,54 @@ export default function ProfilePage() {
                   <span>{user?.phone}</span>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* Change Password */}
+        <div className="bg-white border rounded-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <Lock className="h-5 w-5 text-gray-400" />
+              <h2 className="text-lg font-semibold">Password</h2>
+            </div>
+            {!showChangePwd && (
+              <Button variant="outline" size="sm" onClick={() => setShowChangePwd(true)}>
+                <Lock className="h-4 w-4 mr-1" /> Change Password
+              </Button>
+            )}
+          </div>
+          {showChangePwd && (
+            <div className="space-y-3">
+              <Input
+                label="Current Password"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+              />
+              <Input
+                label="New Password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Min 8 characters"
+              />
+              <Input
+                label="Confirm New Password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repeat new password"
+              />
+              <div className="flex space-x-3 pt-2">
+                <Button onClick={handleChangePassword} loading={changingPwd}>
+                  Update Password
+                </Button>
+                <Button variant="outline" onClick={() => { setShowChangePwd(false); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); }}>
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
         </div>

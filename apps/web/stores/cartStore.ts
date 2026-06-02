@@ -12,6 +12,13 @@ interface CartItem {
   slug?: string;
 }
 
+interface StockIssue {
+  productId: string;
+  name: string;
+  type: 'out_of_stock' | 'reduced_stock';
+  availableStock: number;
+}
+
 interface CartState {
   items: CartItem[];
   isOpen: boolean;
@@ -21,6 +28,7 @@ interface CartState {
   clearCart: () => void;
   toggleCart: () => void;
   syncWithServer: () => Promise<void>;
+  validateStock: () => Promise<StockIssue[]>;
   total: () => number;
   itemCount: () => number;
 }
@@ -94,6 +102,56 @@ export const useCartStore = create<CartState>()(
         } catch {
           // Not logged in or server unavailable - use local cart
         }
+      },
+
+      validateStock: async () => {
+        const issues: StockIssue[] = [];
+        const currentItems = get().items;
+
+        if (currentItems.length === 0) return issues;
+
+        try {
+          // Fetch fresh stock data for all items in cart
+          const productIds = currentItems.map((i) => i.productId);
+          const { data } = await api.post("/products/stock-check", { productIds });
+          const stockMap: Record<string, { stock: number; isAvailable: boolean }> = data.data || {};
+
+          const updatedItems = currentItems.map((item) => {
+            const fresh = stockMap[item.productId];
+            if (!fresh) return item;
+
+            if (!fresh.isAvailable || fresh.stock <= 0) {
+              issues.push({
+                productId: item.productId,
+                name: item.name,
+                type: 'out_of_stock',
+                availableStock: 0,
+              });
+              return { ...item, stock: 0 };
+            }
+
+            if (item.quantity > fresh.stock) {
+              issues.push({
+                productId: item.productId,
+                name: item.name,
+                type: 'reduced_stock',
+                availableStock: fresh.stock,
+              });
+              return { ...item, quantity: fresh.stock, stock: fresh.stock };
+            }
+
+            return { ...item, stock: fresh.stock };
+          });
+
+          // Auto-fix quantities for reduced stock items
+          if (issues.length > 0) {
+            set({ items: updatedItems });
+          }
+        } catch {
+          // Server unavailable - can't validate
+        }
+
+        return issues;
       },
 
       total: () =>

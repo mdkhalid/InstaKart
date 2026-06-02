@@ -2,11 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
+import { useWishlistStore } from "@/stores/wishlistStore";
+import { useAuthStore } from "@/stores/authStore";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 interface ProductCardProps {
@@ -15,8 +18,36 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
+  const toggleItem = useWishlistStore((s) => s.toggleItem);
+  const checkItems = useWishlistStore((s) => s.checkItems);
+  const isWishlisted = useWishlistStore((s) => s.itemIds.has(product.id));
+  const user = useAuthStore((state) => state.user);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+
   const imageUrl = product.images?.[0]?.url || "/placeholder.svg";
   const hasDiscount = product.salePrice && product.salePrice < product.price;
+
+  useEffect(() => {
+    if (user) {
+      checkItems([product.id]);
+    }
+  }, [user?.id, product.id]);
+
+  const handleWishlistToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      toast.error("Please login to save items to wishlist");
+      return;
+    }
+
+    setWishlistLoading(true);
+    const inWishlist = await toggleItem(product.id);
+    setWishlistLoading(false);
+
+    toast.success(inWishlist ? `${product.name} added to wishlist` : `${product.name} removed from wishlist`);
+  };
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -50,6 +81,20 @@ export function ProductCard({ product }: ProductCardProps) {
               <span className="text-white font-semibold">Out of Stock</span>
             </div>
           )}
+          <button
+            onClick={handleWishlistToggle}
+            disabled={wishlistLoading}
+            className={`absolute top-2 right-2 p-2 rounded-full shadow transition-all ${
+              isWishlisted
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : "bg-white/90 text-gray-600 hover:bg-white hover:text-red-500"
+            }`}
+          >
+            <Heart
+              className={`h-4 w-4 ${wishlistLoading ? "animate-pulse" : ""}`}
+              fill={isWishlisted ? "currentColor" : "none"}
+            />
+          </button>
         </div>
         <div className="p-4">
           <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">{product.name}</h3>
