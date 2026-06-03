@@ -6,6 +6,7 @@ import {
   getAllUsers, getUserDetail, changeUserRole, toggleUserStatus, deleteUser,
   updateUser, resetUserPassword, uploadUserAvatar,
   getCoupons, createCoupon, updateCoupon, deleteCoupon,
+  getAnalytics,
 } from "../controllers/admin.controller";
 
 const router = Router();
@@ -24,6 +25,9 @@ router.put("/users/:id/profile", updateUser);
 router.post("/users/:id/avatar", upload.single("avatar"), uploadUserAvatar);
 router.put("/users/:id/reset-password", resetUserPassword);
 router.delete("/users/:id", deleteUser);
+
+// Analytics
+router.get("/analytics", getAnalytics);
 
 // Coupons
 router.get("/coupons", getCoupons);

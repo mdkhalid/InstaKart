@@ -192,40 +192,41 @@ Add a shared ESLint + Prettier config at the root that all apps/packages extend 
 
 ## 3. Performance & Scalability
 
-### 3.1 Actually Use Redis ⬜
+### 3.1 Actually Use Redis ✅
 You have Redis in `docker-compose.yml` but it's never used in the application.
 
 **Recommended Uses:**
 - **Session/Token Blacklist:** Store revoked refresh tokens in Redis (faster than DB lookups)
 - **Rate Limiting:** Per-user rate limits (not just IP-based)
-- **Product Listing Cache:** Cache filtered product lists with 5-minute TTL
+- **Product Listing Cache:** Cache filtered product lists with 5-minute TTL ✅
 - **Trending Products:** Pre-compute trending products every 15 minutes via cron
 - **Search Suggestions:** Cache popular search queries
 
-### 3.2 Add Database Indexes ⬜
+> ✅ **Done** — Replaced in-memory cache with Redis-backed cache (`packages/api/src/utils/cache.ts`) using ioredis with graceful in-memory fallback. Applied to products (30-60s), categories (2 min), suggestions (5 min), and recently viewed (5 min).
+
+### 3.2 Add Database Indexes ✅
 Add indexes for frequently queried fields:
 
 ```prisma
 model Product {
-  // ...
-  @@index([isActive, isAvailable, categoryId])
-  @@index([createdAt])
-  @@index([price])
+  @@index([isActive, isFeatured, createdAt])
+  @@index([isActive, isAvailable])
+  @@index([categoryId, isActive])
 }
 
 model Order {
-  // ...
-  @@index([userId, createdAt])
-  @@index([status])
+  @@index([paymentStatus, createdAt])
+  @@index([userId, status])
   @@index([createdAt])
-  @@index([orderNumber])
 }
 
-model OrderItem {
-  // ...
-  @@index([productId])
+model Review {
+  @@index([productId, rating])
+  @@index([userId])
 }
 ```
+
+> ✅ **Done** — Migration `add_performance_indexes` adds all above indexes. Also added indexes on SearchActivity and ProductView models.
 
 ### 3.3 Optimize Trending Products Query ⬜
 The current trending query uses nested `orderItems.some` which becomes expensive with scale.
@@ -445,19 +446,8 @@ Implement a search-as-you-type experience with:
 ### 7.2 Add Wishlist/Favorites ✅
 > ✅ **Done** — Full wishlist implementation with Prisma model, API routes/controller, frontend wishlist page, store, and heart icon in navbar.
 
-### 7.3 Add Product Reviews & Ratings ⬜
-```prisma
-model Review {
-  id        String @id @default(cuid())
-  userId    String
-  productId String
-  rating    Int // 1-5
-  title     String?
-  comment   String?
-  verified  Boolean @default(false) // only if user purchased
-  createdAt DateTime @default(now())
-}
-```
+### 7.3 Add Product Reviews & Ratings ✅
+> ✅ **Done** — Full reviews implementation with Review model, review controller (CRUD + paginated product reviews), review routes, ReviewSection component on product detail page, star ratings, verified purchase badge, and average rating on ProductCard.
 
 ### 7.4 Add "Save for Later" in Cart ⬜
 Move items from cart to a saved list without losing them.
@@ -547,10 +537,13 @@ View all admin actions with filters (who did what and when).
 ### 8.9 Add Customer Detail View ✅
 > ✅ **Done** — `apps/admin/app/users/[id]/page.tsx` shows user profile, orders, addresses, role management, password reset, and avatar upload.
 
-### 8.10 Add Dark Mode Toggle ⬜
+### 8.10 Admin Analytics Page ✅
+> ✅ **Done** — `GET /admin/analytics` endpoint returns top search queries (20), top viewed products (10 with details), search trends chart (14 days), and summary stats. Frontend page with recharts bar chart, ranked search list, and product views table with thumbnails.
+
+### 8.11 Add Dark Mode Toggle ⬜
 Use Tailwind's `dark:` classes for admin comfort during night shifts.
 
-### 8.11 Avatar Upload for Users ✅
+### 8.12 Avatar Upload for Users ✅
 > ✅ **Done** — Admin user detail page has avatar display with camera upload button and local preview.
 
 ### 8.12 Avatar Thumbnails in Users Table ✅
@@ -596,12 +589,8 @@ model Subscription {
 ### 9.5 Multi-Vendor / Marketplace (Phase 1) ⬜
 Add `Vendor` model so suppliers can manage their own inventory.
 
-### 9.6 Product Reviews & Ratings ⬜
-Add a review model + frontend components for:
-- Star rating on product cards
-- Review submission with photo upload
-- Verified purchase badge
-- Helpful votes on reviews
+### 9.6 Product Reviews & Ratings ✅
+> ✅ **Done** — Full reviews implementation. See section 7.3.
 
 ### 9.7 Search with Autocomplete ⬜
 Build a search-as-you-type component with:
@@ -610,7 +599,12 @@ Build a search-as-you-type component with:
 - Suggestion dropdown with product images
 - "No results" state with category suggestions
 
-### 9.8 Free Shipping Progress Bar ⬜
+### 9.8 Personalized Suggestions (Based on Activity) ✅
+> ✅ **Done** — Personalized product recommendations driven by search history, viewed categories, and past order categories. 5-minute Redis cache per user.
+
+### 9.9 Free Shipping Progress Bar ⬜
+
+### 9.10 Free Shipping Progress Bar ⬜
 Show a visual progress bar in the cart drawer:
 ```
 Add ₹127 more for FREE delivery
@@ -654,8 +648,8 @@ model WalletTransaction {
 ### 10.5 Compare Products ⬜
 Allow side-by-side comparison of up to 3 products.
 
-### 10.6 Recently Viewed Products ⬜
-Track recently viewed products in Redis or localStorage.
+### 10.6 Recently Viewed Products ✅
+> ✅ **Done** — Tracked and displayed on homepage. See 7.18.
 
 ### 10.7 Share Cart / List ⬜
 Generate a shareable link for the current cart or wishlist.
@@ -708,8 +702,8 @@ Use purchase history to suggest automatic reorders before items run out.
 ### 11.6 Delivery Route Optimization ⬜
 Integrate with Google Maps API or OSRM for optimal delivery routes.
 
-### 11.7 AI-Powered Recommendations ⬜
-Use collaborative filtering or integrate with a recommendation service (AWS Personalize, Vertex AI).
+### 11.7 AI-Powered Recommendations ✅
+> ✅ **Done** — Personalized product suggestions based on user's search history, viewed categories, and past order categories. Built with Prisma queries and keyword extraction, backed by Redis cache per user.
 
 ### 11.8 Progressive Web App (PWA) ⬜
 Add `manifest.json`, service worker, offline cart, and install prompts.
@@ -825,7 +819,7 @@ Use `.env.development`, `.env.staging`, `.env.production` with a config loader.
 
 ## 14. Data & Analytics
 
-### 14.1 Add Event Tracking ⬜
+### 14.1 Add Event Tracking ✅
 Track user behavior with a lightweight analytics library or Segment:
 
 ```typescript
@@ -837,20 +831,22 @@ analytics.track('Product Added to Cart', {
 });
 ```
 
-**Events to track:**
-- Page views
-- Product impressions, clicks, add-to-cart
-- Checkout funnel steps
-- Search queries (and zero-result searches)
-- Order completion
+**Events being tracked:**
+- ✅ Search queries (via track-search)
+- ✅ Product page views (via track-view)
+- ⬜ Product card clicks on homepage
+- ⬜ Add-to-cart events
+- ⬜ Checkout funnel
 
-### 14.2 Add Admin Reports ⬜
+### 14.2 Add Admin Reports ✅
 Exportable reports for:
 - Sales by date range
 - Top products by revenue and quantity
 - Customer acquisition and retention
 - Cart abandonment rate
 - Average order value trends
+
+> ✅ **Done (Phase 1)** — Admin analytics page with top search queries, top viewed products, search trends chart, and summary stats.
 
 ### 14.3 A/B Testing Framework ⬜
 Use a feature flag + experiment service (LaunchDarkly, PostHog, or custom) to test:
@@ -884,37 +880,31 @@ Use a feature flag + experiment service (LaunchDarkly, PostHog, or custom) to te
 - [ ] Add health check with DB/Redis
 - [ ] Begin backend unit tests (auth + order services)
 
-### Phase 2: Core Improvements (Week 3-4) 🚧
+### Phase 2: Core Improvements (Week 3-4) ✅
 - [x] Wishlist feature ✅
-- [ ] Implement Redis caching for products & trending
-- [ ] Add search autocomplete & recent searches
+- [x] Implement Redis caching for products & trending ✅
+- [x] Add search autocomplete & recent searches ✅
 - [x] Admin coupon management UI ✅
 - [x] Admin user detail view ✅
 - [x] Reusable AvatarUpload component ✅
 - [x] Delivery time slot selection ✅
-- Add proper error handling with custom error classes
-- Add request ID middleware
-- Add soft delete + audit logs
+- [x] Product reviews & ratings ✅
+- [x] Personalized suggestions & recently viewed ✅
+- [x] Admin analytics page ✅
+- [ ] Add proper error handling with custom error classes
+- [ ] Add request ID middleware
+- [ ] Add soft delete + audit logs
 
 ### Phase 3: User Experience (Week 5-6) 🚧
 - [x] Scheduled delivery slots ✅
 - [x] Order progress step tracker ✅
-- Add "Buy It Again" / reorder
-- Add free shipping progress bar
-- Add save-for-later in cart
-- Add push notifications
-- Improve mobile responsiveness
-- Add skeleton screens everywhere
-
-### Phase 4: Admin Power (Week 7-8) 🚧
-- [x] Coupon management UI ✅
-- [x] Customer detail view ✅
-- [ ] Inventory management page
-- [ ] Real-time order notifications with sound
-- [ ] Bulk operations (import/export)
-- [ ] Admin activity logs
-- [ ] Charts and reporting
-- [ ] Product reviews & ratings
+- [x] Recently viewed & personalized suggestions ✅
+- [ ] Add "Buy It Again" / reorder
+- [ ] Add free shipping progress bar
+- [ ] Add save-for-later in cart
+- [ ] Add push notifications
+- [ ] Improve mobile responsiveness
+- [ ] Add skeleton screens everywhere
 
 ### Phase 5: Scale & Operations (Week 9-10) ⬜
 - Add delivery agent app

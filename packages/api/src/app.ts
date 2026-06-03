@@ -17,6 +17,7 @@ import paymentRoutes from "./routes/payment.routes";
 import adminRoutes from "./routes/admin.routes";
 import wishlistRoutes from "./routes/wishlist.routes";
 import reviewRoutes from "./routes/review.routes";
+import suggestionRoutes from "./routes/suggestion.routes";
 
 const app = express();
 
@@ -63,6 +64,7 @@ app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/wishlist", wishlistRoutes);
 app.use("/api/v1/reviews", reviewRoutes);
+app.use("/api/v1/suggestions", suggestionRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

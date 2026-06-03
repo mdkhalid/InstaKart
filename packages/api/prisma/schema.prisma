@@ -60,6 +60,8 @@ model User {
   cart             Cart?
   wishlist         Wishlist?
   reviews          Review[]
+  searchActivity   SearchActivity[]
+  productViews     ProductView[]
   refreshTokens    RefreshToken[]
   passwordResets   PasswordReset[]
 
@@ -157,6 +159,7 @@ model Product {
   orderItems    OrderItem[]
   wishlistItems WishlistItem[]
   reviews       Review[]
+  productViews  ProductView[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -317,4 +320,27 @@ model Coupon {
   expiresAt      DateTime?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
+}
+
+model SearchActivity {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query        String
+  resultsCount Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model ProductView {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, productId])
 }

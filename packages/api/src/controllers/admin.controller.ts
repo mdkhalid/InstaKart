@@ -562,6 +562,114 @@ export const uploadUserAvatar = async (req: Request, res: Response) => {
   }
 };
 
+// ─────────────────────── Analytics ───────────────────────
+
+export const getAnalytics = async (_req: Request, res: Response) => {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [
+      topSearches,
+      topViewedProducts,
+      searchTrend,
+      uniqueSearchers,
+      uniqueSearchTerms,
+    ] = await Promise.all([
+      // Top search queries (last 30 days)
+      prisma.searchActivity.groupBy({
+        by: ["query"],
+        _count: { query: true },
+        orderBy: { _count: { query: "desc" } },
+        where: { createdAt: { gte: thirtyDaysAgo } },
+        take: 20,
+      }),
+
+      // Top viewed products (last 30 days)
+      prisma.productView.groupBy({
+        by: ["productId"],
+        _count: { productId: true },
+        orderBy: { _count: { productId: "desc" } },
+        where: { createdAt: { gte: thirtyDaysAgo } },
+        take: 10,
+      }),
+
+      // Search trends (searches per day, last 14 days)
+      prisma.$queryRawUnsafe<Array<{ date: string; count: number }>>(
+        `SELECT DATE("createdAt") as date, COUNT(*)::int as count
+         FROM "SearchActivity"
+         WHERE "createdAt" >= $1
+         GROUP BY DATE("createdAt")
+         ORDER BY date ASC`,
+        thirtyDaysAgo
+      ),
+
+      // Unique users who searched
+      prisma.searchActivity.groupBy({
+        by: ["userId"],
+        where: { createdAt: { gte: thirtyDaysAgo } },
+        _count: { userId: true },
+      }),
+
+      // Unique search terms count
+      prisma.searchActivity.groupBy({
+        by: ["query"],
+        where: { createdAt: { gte: thirtyDaysAgo } },
+      }),
+    ]);
+
+    // Enrich top viewed products with names and images
+    const viewedProductIds = topViewedProducts.map((v) => v.productId);
+    const products = viewedProductIds.length > 0
+      ? await prisma.product.findMany({
+          where: { id: { in: viewedProductIds } },
+          select: { id: true, name: true, slug: true, price: true, salePrice: true, images: { take: 1, select: { url: true } } },
+        })
+      : [];
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    const enrichedViewed = topViewedProducts.map((v) => ({
+      productId: v.productId,
+      views: v._count.productId,
+      product: productMap.get(v.productId) || null,
+    }));
+
+    // Build complete 14-day search trend chart
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    const trendMap = new Map(
+      (searchTrend || []).map((r: any) => [
+        r.date instanceof Date ? r.date.toISOString().split("T")[0] : String(r.date).split("T")[0],
+        Number(r.count),
+      ])
+    );
+    const searchChart: { date: string; searches: number }[] = [];
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(fourteenDaysAgo);
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().split("T")[0];
+      searchChart.push({ date: dateStr, searches: trendMap.get(dateStr) || 0 });
+    }
+
+    const totalUniqueSearchers = uniqueSearchers.length;
+    const totalSearches = topSearches.reduce((sum, s) => sum + s._count.query, 0);
+
+    return successResponse(res, {
+      topSearches: topSearches.map((s) => ({ query: s.query, count: s._count.query })),
+      topViewedProducts: enrichedViewed,
+      searchTrend: searchChart,
+      summary: {
+        totalSearches,
+        uniqueSearchers: totalUniqueSearchers,
+        uniqueSearchTerms: uniqueSearchTerms.length,
+      },
+    });
+  } catch (error) {
+    console.error("Analytics error:", error);
+    return errorResponse(res, "Failed to get analytics", 500);
+  }
+};
+
 export const resetUserPassword = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

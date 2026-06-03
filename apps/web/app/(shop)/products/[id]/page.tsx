@@ -35,6 +35,12 @@ export default function ProductDetailPage() {
     try {
       const { data } = await api.get(`/products/${params.slug}`);
       setProduct(data.data);
+
+      // Track product view (fire-and-forget, only for logged-in users)
+      const token = localStorage.getItem("accessToken");
+      if (token && data.data?.id) {
+        api.post("/suggestions/track-view", { productId: data.data.id }).catch(() => {});
+      }
     } catch {
       toast.error("Product not found");
       router.push("/");
