@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { uploadImage, deleteImage } from "../services/upload.service";
+import { withCache, clearCache } from "../utils/cache";
 
 // Public routes
 export const checkStock = async (req: Request, res: Response) => {
@@ -64,31 +65,45 @@ export const listProducts = async (req: Request, res: Response) => {
       case "popular": orderBy = { orderItems: { _count: "desc" } }; break;
     }
 
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy,
-        include: {
-          category: { select: { id: true, name: true, slug: true } },
-          images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
-        },
-      }),
-      prisma.product.count({ where }),
-    ]);
+    const cacheKey = `products:list:${JSON.stringify({ page, limit, category, minPrice, maxPrice, search, sort, featured, inStock })}`;
+    const enriched = await withCache(cacheKey, async () => {
+      const [products, total] = await Promise.all([
+        prisma.product.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy,
+          include: {
+            category: { select: { id: true, name: true, slug: true } },
+            images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
+            _count: { select: { reviews: true } },
+          },
+        }),
+        prisma.product.count({ where }),
+      ]);
 
-    const enriched = products.map((p) => ({
-      ...p,
-      price: Number(p.price),
-      salePrice: p.salePrice ? Number(p.salePrice) : null,
-      discountPercent: p.salePrice ? Math.round(((Number(p.price) - Number(p.salePrice)) / Number(p.price)) * 100) : 0,
-    }));
+      // Get average ratings for all products in one query
+      const productIds = products.map((p) => p.id);
+      const ratingAggs = productIds.length > 0 ? await prisma.review.groupBy({
+        by: ["productId"],
+        where: { productId: { in: productIds } },
+        _avg: { rating: true },
+      }) : [];
+      const ratingMap = new Map(ratingAggs.map((r) => [r.productId, r._avg.rating]));
 
-    return successResponse(res, {
-      products: enriched,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
-    });
+      return {
+        products: products.map((p) => ({
+          ...p,
+          price: Number(p.price),
+          salePrice: p.salePrice ? Number(p.salePrice) : null,
+          discountPercent: p.salePrice ? Math.round(((Number(p.price) - Number(p.salePrice)) / Number(p.price)) * 100) : 0,
+          averageRating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+        })),
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
+    }, 30_000); // Cache for 30 seconds
+
+    return successResponse(res, enriched);
   } catch (error) {
     console.error("List products error:", error);
     return errorResponse(res, "Failed to list products", 500);
@@ -97,62 +112,60 @@ export const listProducts = async (req: Request, res: Response) => {
 
 export const getTrendingProducts = async (req: Request, res: Response) => {
   try {
-    // Get trending products based on recent order activity (last 7 days)
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const enriched = await withCache("products:trending", async () => {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    const trendingProducts = await prisma.product.findMany({
-      where: {
-        isActive: true,
-        isAvailable: true,
-        orderItems: {
-          some: {
-            order: {
-              createdAt: {
-                gte: oneWeekAgo,
-              },
-              status: {
-                in: ["CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY", "DELIVERED"],
+      const trendingProducts = await prisma.product.findMany({
+        where: {
+          isActive: true,
+          isAvailable: true,
+          orderItems: {
+            some: {
+              order: {
+                createdAt: { gte: oneWeekAgo },
+                status: { in: ["CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY", "DELIVERED"] },
               },
             },
           },
         },
-      },
-      take: 10,
-      orderBy: {
-        orderItems: {
-          _count: "desc",
+        take: 10,
+        orderBy: { orderItems: { _count: "desc" } },
+        include: {
+          category: { select: { id: true, name: true, slug: true } },
+          images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
+          _count: { select: { reviews: true } },
         },
-      },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-        images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
-      },
-    });
+      });
 
-    // If no trending products found, fall back to featured or newest products
-    const productsToReturn = trendingProducts.length > 0 
-      ? trendingProducts 
-      : await prisma.product.findMany({
-          where: {
-            isActive: true,
-            isAvailable: true,
-          },
-          take: 10,
-          orderBy: {
-            createdAt: "desc",
-          },
-          include: {
-            category: { select: { id: true, name: true, slug: true } },
-            images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
-          },
-        });
+      const productsToReturn = trendingProducts.length > 0
+        ? trendingProducts
+        : await prisma.product.findMany({
+            where: { isActive: true, isAvailable: true },
+            take: 10,
+            orderBy: { createdAt: "desc" },
+            include: {
+              category: { select: { id: true, name: true, slug: true } },
+              images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
+              _count: { select: { reviews: true } },
+            },
+          });
 
-    const enriched = productsToReturn.map((p) => ({
-      ...p,
-      price: Number(p.price),
-      salePrice: p.salePrice ? Number(p.salePrice) : null,
-    }));
+      const productIds = productsToReturn.map((p) => p.id);
+      const ratingAggs = productIds.length > 0 ? await prisma.review.groupBy({
+        by: ["productId"],
+        where: { productId: { in: productIds } },
+        _avg: { rating: true },
+      }) : [];
+      const ratingMap = new Map(ratingAggs.map((r) => [r.productId, r._avg.rating]));
+
+      return productsToReturn.map((p) => ({
+        ...p,
+        price: Number(p.price),
+        salePrice: p.salePrice ? Number(p.salePrice) : null,
+        averageRating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+      }));
+    }, 60_000); // Cache for 60 seconds (trending changes slowly)
 
     return successResponse(res, enriched);
   } catch (error) {
@@ -163,20 +176,31 @@ export const getTrendingProducts = async (req: Request, res: Response) => {
 
 export const getFeatured = async (req: Request, res: Response) => {
   try {
-    const products = await prisma.product.findMany({
-      where: { isFeatured: true, isActive: true, isAvailable: true },
-      take: 10,
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-        images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
-      },
-    });
+    const enriched = await withCache("products:featured", async () => {
+      const products = await prisma.product.findMany({
+        where: { isFeatured: true, isActive: true, isAvailable: true },
+        take: 10,
+        include: {
+          category: { select: { id: true, name: true, slug: true } },
+          images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
+        },
+      });
 
-    const enriched = products.map((p) => ({
-      ...p,
-      price: Number(p.price),
-      salePrice: p.salePrice ? Number(p.salePrice) : null,
-    }));
+      const productIds = products.map((p) => p.id);
+      const ratingAggs = productIds.length > 0 ? await prisma.review.groupBy({
+        by: ["productId"],
+        where: { productId: { in: productIds } },
+        _avg: { rating: true },
+      }) : [];
+      const ratingMap = new Map(ratingAggs.map((r) => [r.productId, r._avg.rating]));
+
+      return products.map((p) => ({
+        ...p,
+        price: Number(p.price),
+        salePrice: p.salePrice ? Number(p.salePrice) : null,
+        averageRating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+      }));
+    }, 60_000); // Cache for 60 seconds
 
     return successResponse(res, enriched);
   } catch (error) {
@@ -204,10 +228,29 @@ export const searchProducts = async (req: Request, res: Response) => {
       include: {
         category: { select: { id: true, name: true, slug: true } },
         images: { where: { isPrimary: true }, select: { url: true } },
+        _count: { select: { reviews: true } },
       },
     });
 
-    return successResponse(res, products);
+    const productIds = products.map((p) => p.id);
+    const ratingAggs = await prisma.review.groupBy({
+      by: ["productId"],
+      where: { productId: { in: productIds } },
+      _avg: { rating: true },
+    });
+    const ratingMap = new Map(ratingAggs.map((r) => [r.productId, r._avg.rating]));
+
+    const enriched = products.map((p) => ({
+      ...p,
+      price: Number(p.price),
+      salePrice: p.salePrice ? Number(p.salePrice) : null,
+      discountPercent: p.salePrice
+        ? Math.round(((Number(p.price) - Number(p.salePrice)) / Number(p.price)) * 100)
+        : 0,
+      averageRating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+    }));
+
+    return successResponse(res, enriched);
   } catch (error) {
     console.error("Search products error:", error);
     return errorResponse(res, "Failed to search products", 500);
@@ -230,6 +273,13 @@ export const getProduct = async (req: Request, res: Response) => {
       return errorResponse(res, "Product not found", 404);
     }
 
+    // Get review stats
+    const reviewAgg = await prisma.review.aggregate({
+      where: { productId: product.id },
+      _avg: { rating: true },
+      _count: true,
+    });
+
     const enriched = {
       ...product,
       price: Number(product.price),
@@ -238,6 +288,8 @@ export const getProduct = async (req: Request, res: Response) => {
       discountPercent: product.salePrice
         ? Math.round(((Number(product.price) - Number(product.salePrice)) / Number(product.price)) * 100)
         : 0,
+      averageRating: reviewAgg._avg.rating ? Math.round(Number(reviewAgg._avg.rating) * 10) / 10 : 0,
+      totalReviews: reviewAgg._count,
     };
 
     return successResponse(res, enriched);
@@ -273,6 +325,9 @@ export const createProduct = async (req: Request, res: Response) => {
       },
     });
 
+    // Invalidate product list caches since data changed
+    clearCache("products:");
+
     return successResponse(res, { ...product, price: Number(product.price) }, "Product created", 201);
   } catch (error) {
     console.error("Create product error:", error);
@@ -303,6 +358,9 @@ export const updateProduct = async (req: Request, res: Response) => {
       },
     });
 
+    // Invalidate product list caches since data changed
+    clearCache("products:");
+
     return successResponse(res, product, "Product updated");
   } catch (error) {
     console.error("Update product error:", error);
@@ -317,6 +375,8 @@ export const deleteProduct = async (req: Request, res: Response) => {
       where: { id },
       data: { isActive: false },
     });
+    // Invalidate product list caches since data changed
+    clearCache("products:");
     return successResponse(res, null, "Product deactivated");
   } catch (error) {
     console.error("Delete product error:", error);
@@ -351,6 +411,9 @@ export const uploadProductImages = async (req: Request, res: Response) => {
       where: { id },
       include: { images: { orderBy: { sortOrder: "asc" } } },
     });
+
+    // Invalidate product list caches since images changed
+    clearCache("products:");
 
     return successResponse(res, product, "Images uploaded");
   } catch (error) {

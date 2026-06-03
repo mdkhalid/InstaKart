@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { ShoppingCart, Minus, Plus, ChevronRight } from "lucide-react";
+import { ShoppingCart, Minus, Plus, ChevronRight, Star } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
+import { ReviewSection } from "@/components/review/ReviewSection";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -119,6 +120,26 @@ export default function ProductDetailPage() {
             <h1 className="text-2xl font-bold text-gray-900 mb-2">{product.name}</h1>
             <p className="text-gray-500 text-sm mb-2">{product.unit} | SKU: {product.sku}</p>
 
+            {/* Rating Summary */}
+            {product.totalReviews > 0 && (
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="flex items-center space-x-0.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`h-4 w-4 ${
+                        star <= Math.round(product.averageRating)
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "fill-gray-200 text-gray-200"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm font-medium text-gray-700">{product.averageRating}</span>
+                <span className="text-sm text-gray-400">({product.totalReviews} review{product.totalReviews !== 1 ? "s" : ""})</span>
+              </div>
+            )}
+
             <div className="flex items-center space-x-3 mb-4">
               {hasDiscount ? (
                 <>
@@ -185,6 +206,9 @@ export default function ProductDetailPage() {
             </Button>
           </div>
         </div>
+
+        {/* Reviews Section */}
+        <ReviewSection productSlug={params.slug as string} productId={product.id} />
       </main>
       <Footer />
     </>

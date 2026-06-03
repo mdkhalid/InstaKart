@@ -10,7 +10,7 @@ const TAX_RATE = Number(process.env.TAX_RATE) || 0.05;
 
 export const createOrder = async (req: Request, res: Response) => {
   try {
-    const { addressId, paymentMethod = "COD", couponCode, notes } = req.body;
+    const { addressId, paymentMethod = "COD", couponCode, notes, estimatedDelivery: preferredDelivery } = req.body;
     const userId = req.user!.userId;
 
     // Get cart
@@ -82,8 +82,10 @@ export const createOrder = async (req: Request, res: Response) => {
     // Generate order number using atomic counter (prevents race condition)
     const year = new Date().getFullYear();
 
-    // Calculate estimated delivery (40 min from now)
-    const estimatedDelivery = new Date(Date.now() + 40 * 60 * 1000);
+    // Calculate estimated delivery (use preferred time or default to 30-60 min from now)
+    const estimatedDelivery = preferredDelivery
+      ? new Date(preferredDelivery)
+      : new Date(Date.now() + (30 + Math.floor(Math.random() * 30)) * 60 * 1000);
 
     // Create order in transaction
     const order = await prisma.$transaction(async (tx) => {

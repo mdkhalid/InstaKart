@@ -1,17 +1,20 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
+import { withCache, clearCache } from "../utils/cache";
 
 export const listCategories = async (_req: Request, res: Response) => {
   try {
-    const categories = await prisma.category.findMany({
-      where: { isActive: true },
-      include: {
-        children: { where: { isActive: true }, select: { id: true, name: true, slug: true } },
-        _count: { select: { products: true } },
-      },
-      orderBy: { sortOrder: "asc" },
-    });
+    const categories = await withCache("categories:all", async () => {
+      return prisma.category.findMany({
+        where: { isActive: true },
+        include: {
+          children: { where: { isActive: true }, select: { id: true, name: true, slug: true } },
+          _count: { select: { products: true } },
+        },
+        orderBy: { sortOrder: "asc" },
+      });
+    }, 120_000); // Cache for 2 minutes
     return successResponse(res, categories);
   } catch (error) {
     console.error("List categories error:", error);
@@ -21,30 +24,22 @@ export const listCategories = async (_req: Request, res: Response) => {
 
 export const getPopularCategories = async (_req: Request, res: Response) => {
   try {
-    // Get popular categories based on product count and activity
-    const popularCategories = await prisma.category.findMany({
-      where: { isActive: true },
-      take: 8,
-      orderBy: {
-        products: {
-          _count: "desc",
-        },
-      },
-      include: {
-        _count: {
-          select: { products: true },
-        },
-      },
-    });
+    const categoriesToReturn = await withCache("categories:popular", async () => {
+      const popularCategories = await prisma.category.findMany({
+        where: { isActive: true },
+        take: 8,
+        orderBy: { products: { _count: "desc" } },
+        include: { _count: { select: { products: true } } },
+      });
 
-    // If no categories with products found, fall back to all active categories
-    const categoriesToReturn = popularCategories.length > 0
-      ? popularCategories
-      : await prisma.category.findMany({
-          where: { isActive: true },
-          take: 8,
-          orderBy: { sortOrder: "asc" },
-        });
+      return popularCategories.length > 0
+        ? popularCategories
+        : await prisma.category.findMany({
+            where: { isActive: true },
+            take: 8,
+            orderBy: { sortOrder: "asc" },
+          });
+    }, 120_000); // Cache for 2 minutes
 
     return successResponse(res, categoriesToReturn);
   } catch (error) {
@@ -61,6 +56,8 @@ export const createCategory = async (req: Request, res: Response) => {
     const category = await prisma.category.create({
       data: { name, slug, description, imageUrl, parentId, sortOrder: sortOrder || 0 },
     });
+
+    clearCache("categories:");
 
     return successResponse(res, category, "Category created", 201);
   } catch (error: any) {
@@ -83,6 +80,9 @@ export const updateCategory = async (req: Request, res: Response) => {
     if (isActive !== undefined) data.isActive = isActive;
 
     const category = await prisma.category.update({ where: { id }, data });
+
+    clearCache("categories:");
+
     return successResponse(res, category, "Category updated");
   } catch (error) {
     console.error("Update category error:", error);
@@ -95,6 +95,9 @@ export const deleteCategory = async (req: Request, res: Response) => {
     const { id } = req.params;
     // Soft delete
     await prisma.category.update({ where: { id }, data: { isActive: false } });
+
+    clearCache("categories:");
+
     return successResponse(res, null, "Category deleted");
   } catch (error) {
     console.error("Delete category error:", error);

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart, Heart, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/utils";
@@ -26,6 +26,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const imageUrl = product.images?.[0]?.url || "/placeholder.svg";
   const hasDiscount = product.salePrice && product.salePrice < product.price;
+  const hasRating = product.averageRating && product.averageRating > 0;
 
   useEffect(() => {
     if (user) {
@@ -98,6 +99,15 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
         <div className="p-4">
           <h3 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">{product.name}</h3>
+          {hasRating && (
+            <div className="flex items-center space-x-1 mb-1">
+              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+              <span className="text-xs font-medium text-gray-700">{product.averageRating}</span>
+              {product._count?.reviews > 0 && (
+                <span className="text-xs text-gray-400">({product._count.reviews})</span>
+              )}
+            </div>
+          )}
           <p className="text-xs text-gray-500 mb-2">{product.unit}</p>
           <div className="flex items-center space-x-2 mb-3">
             {hasDiscount ? (

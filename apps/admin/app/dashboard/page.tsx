@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { LayoutDashboard, Package, ShoppingCart, Users, TrendingUp, AlertTriangle } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useRouter } from "next/navigation";
 import { StatsCard } from "@/components/StatsCard";
 import { StatusBadge, getStatusVariant } from "@/components/StatusBadge";
@@ -88,20 +89,40 @@ export default function DashboardPage() {
           {revenueChart?.length === 0 ? (
             <p className="text-gray-500 text-sm">No revenue data</p>
           ) : (
-            <div className="space-y-1">
-              {revenueChart?.slice(-14).map((day: any, i: number) => (
-                <div key={i} className="flex items-center space-x-2 text-sm">
-                  <span className="w-24 text-gray-500">{day.date?.slice(5)}</span>
-                  <div className="flex-1 bg-gray-100 rounded-full h-4">
-                    <div
-                      className="bg-primary-500 rounded-full h-4 transition-all"
-                      style={{ width: `${Math.min(100, (day.revenue / Math.max(...revenueChart.map((d: any) => d.revenue))) * 100)}%` }}
-                    />
-                  </div>
-                  <span className="w-20 text-right font-medium">{formatPrice(day.revenue)}</span>
-                </div>
-              ))}
-            </div>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={revenueChart?.slice(-14)} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 12, fill: "#6b7280" }}
+                  tickFormatter={(val: string) => val?.slice(5) || ""}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: "#6b7280" }}
+                  tickFormatter={(val: number) => `₹${(val / 1000).toFixed(0)}k`}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  formatter={(value: number) => [formatPrice(value), "Revenue"]}
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "1px solid #e5e7eb",
+                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    fontSize: "13px",
+                  }}
+                  cursor={{ fill: "#f0fdf4" }}
+                />
+                <Bar
+                  dataKey="revenue"
+                  fill="#22c55e"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={40}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </div>
       </div>

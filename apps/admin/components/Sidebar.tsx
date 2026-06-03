@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   Users,
   Tags,
+  Percent,
   LogOut,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -19,6 +20,7 @@ const navItems = [
   { href: "/orders", label: "Orders", icon: ShoppingCart },
   { href: "/users", label: "Users", icon: Users },
   { href: "/categories", label: "Categories", icon: Tags },
+  { href: "/coupons", label: "Coupons", icon: Percent },
 ];
 
 export function Sidebar() {

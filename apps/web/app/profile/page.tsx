@@ -1,21 +1,31 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Mail, Phone, MapPin, Plus, Edit2, Trash2, Lock, Camera } from "lucide-react";
-import Image from "next/image";
+import { User, Mail, Phone, MapPin, Plus, Edit2, Trash2, Lock, Shield, Home, LogOut } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/dialog";
+import { AvatarUpload } from "@/components/ui/AvatarUpload";
 import { useAuthStore } from "@/stores/authStore";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
+import { cn } from "@/lib/utils";
+
+type Tab = "profile" | "addresses" | "security";
+
+const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: "profile", label: "Profile", icon: <User className="h-4 w-4" /> },
+  { id: "addresses", label: "Addresses", icon: <Home className="h-4 w-4" /> },
+  { id: "security", label: "Security", icon: <Shield className="h-4 w-4" /> },
+];
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, updateProfile, logout } = useAuthStore();
+  const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
@@ -24,15 +34,13 @@ export default function ProfilePage() {
   const [addresses, setAddresses] = useState([]);
 
   // Change password state
-  const [showChangePwd, setShowChangePwd] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPwd, setChangingPwd] = useState(false);
 
-  // Avatar upload
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressForm, setAddressForm] = useState({
     label: "Home", street: "", city: "", state: "", pincode: "", isDefault: false,
@@ -108,7 +116,6 @@ export default function ProfilePage() {
     try {
       await api.put("/users/change-password", { currentPassword, newPassword });
       toast.success("Password changed successfully");
-      setShowChangePwd(false);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -119,10 +126,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleAvatarUpload = async (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
       toast.error("File too large. Max 5MB");
       return;
@@ -131,181 +135,261 @@ export default function ProfilePage() {
     const formData = new FormData();
     formData.append("avatar", file);
 
+    // Show local preview immediately
+    const objectUrl = URL.createObjectURL(file);
+    setLocalPreviewUrl(objectUrl);
     setUploadingAvatar(true);
     try {
-      const { data } = await api.post("/users/avatar", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const { data } = await api.post("/users/avatar", formData);
       if (data.data?.avatarUrl) {
         useAuthStore.getState().setUser({ ...user!, avatarUrl: data.data.avatarUrl });
       }
       toast.success("Avatar updated");
-    } catch {
-      toast.error("Failed to upload avatar");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to upload avatar");
+      // Revert preview on failure
+      setLocalPreviewUrl(null);
     } finally {
+      URL.revokeObjectURL(objectUrl);
       setUploadingAvatar(false);
     }
   };
+
+  const initials = [user?.firstName, user?.lastName]
+    .filter(Boolean)
+    .map((s) => (s as string).charAt(0).toUpperCase())
+    .join("")
+    .slice(0, 2) || "U";
 
   return (
     <>
       <Navbar />
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">My Profile</h1>
-
-        <div className="bg-white border rounded-xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Personal Information</h2>
-            <Button variant="outline" size="sm" onClick={() => setEditing(!editing)}>
-              {editing ? "Cancel" : <><Edit2 className="h-4 w-4 mr-1" /> Edit</>}
-            </Button>
+        <div className="flex items-center space-x-3 mb-6">
+          <AvatarUpload
+            src={user?.avatarUrl}
+            previewUrl={localPreviewUrl}
+            initials={initials}
+            size="md"
+            alt={user?.firstName || "Profile"}
+          />
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">{user?.firstName} {user?.lastName}</h1>
+            <p className="text-xs text-gray-500">{user?.email}</p>
           </div>
+        </div>
 
-          {editing ? (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <Input label="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                <Input label="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-              </div>
-              <Input label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              <Button onClick={handleSaveProfile} loading={saving}>Save Changes</Button>
+        {/* Tab Bar */}
+        <div className="flex space-x-1 bg-gray-100 rounded-xl p-1 mb-6">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
+                activeTab === tab.id
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              )}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Profile Tab */}
+        {activeTab === "profile" && (
+          <div className="bg-white border rounded-xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold">Personal Information</h2>
+              <Button variant="outline" size="sm" onClick={() => setEditing(!editing)}>
+                {editing ? "Cancel" : <><Edit2 className="h-4 w-4 mr-1" /> Edit</>}
+              </Button>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {/* Avatar */}
-              <div className="flex items-center space-x-4 mb-4">
-                <div className="relative">
-                  <div className="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
-                    {user?.avatarUrl ? (
-                      <Image src={user.avatarUrl} alt="Avatar" width={64} height={64} className="object-cover" />
-                    ) : (
-                      <User className="h-8 w-8 text-primary-600" />
-                    )}
-                  </div>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingAvatar}
-                    className="absolute -bottom-1 -right-1 p-1.5 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors disabled:opacity-50"
-                    title="Upload avatar"
-                  >
-                    <Camera className="h-3 w-3" />
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={handleAvatarUpload}
+
+            {editing ? (
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4 pb-4 border-b">
+                  <AvatarUpload
+                    src={user?.avatarUrl}
+                    previewUrl={localPreviewUrl}
+                    initials={initials}
+                    size="md"
+                    alt="Avatar"
+                    uploading={uploadingAvatar}
+                    onUpload={handleAvatarUpload}
                   />
+                  <p className="text-sm text-gray-500">Click the camera icon to upload a new photo</p>
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
-                  <p className="text-xs text-gray-500">{user?.role}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input label="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                  <Input label="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                </div>
+                <Input label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 9876543210" />
+                <div className="pt-2">
+                  <Button onClick={handleSaveProfile} loading={saving}>
+                    Save Changes
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center space-x-3">
-                <Mail className="h-5 w-5 text-gray-400" />
-                <span>{user?.email}</span>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4 pb-4 border-b">
+                  <AvatarUpload
+                    src={user?.avatarUrl}
+                    previewUrl={localPreviewUrl}
+                    initials={initials}
+                    size="md"
+                    alt="Avatar"
+                    uploading={uploadingAvatar}
+                    onUpload={handleAvatarUpload}
+                  />
+                  <div>
+                    <p className="font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
+                    <p className="text-xs text-gray-500 capitalize">{user?.role?.toLowerCase() || "Member"}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <Mail className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="text-sm font-medium text-gray-900">{user?.email}</p>
+                    </div>
+                  </div>
+                  {user?.phone && (
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <Phone className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs text-gray-500">Phone</p>
+                        <p className="text-sm font-medium text-gray-900">{user?.phone}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-              {user?.phone && (
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-gray-400" />
-                  <span>{user?.phone}</span>
+            )}
+          </div>
+        )}
+
+        {/* Addresses Tab */}
+        {activeTab === "addresses" && (
+          <div className="bg-white border rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">My Addresses</h2>
+              <Button variant="outline" size="sm" onClick={() => setShowAddressForm(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Add Address
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {addresses.map((addr: any) => (
+                <div key={addr.id} className="flex items-center justify-between p-4 border rounded-lg hover:border-gray-300 transition-colors">
+                  <div className="flex items-start space-x-3">
+                    <MapPin className="h-5 w-5 text-primary-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium text-sm">{addr.label}</span>
+                        {addr.isDefault && (
+                          <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full font-medium">Default</span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 mt-0.5">{addr.street}</p>
+                      <p className="text-sm text-gray-600">{addr.city}, {addr.state} - {addr.pincode}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    {!addr.isDefault && (
+                      <button
+                        onClick={() => handleSetDefault(addr.id)}
+                        className="text-xs text-primary-600 hover:text-primary-700 hover:underline font-medium whitespace-nowrap"
+                      >
+                        Set Default
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteAddress(addr.id)}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete address"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {addresses.length === 0 && (
+                <div className="text-center py-10">
+                  <MapPin className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+                  <p className="text-gray-500 text-sm mb-1">No addresses saved yet</p>
+                  <p className="text-xs text-gray-400">Add an address for faster checkout</p>
                 </div>
               )}
             </div>
-          )}
-        </div>
-
-        {/* Change Password */}
-        <div className="bg-white border rounded-xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <Lock className="h-5 w-5 text-gray-400" />
-              <h2 className="text-lg font-semibold">Password</h2>
-            </div>
-            {!showChangePwd && (
-              <Button variant="outline" size="sm" onClick={() => setShowChangePwd(true)}>
-                <Lock className="h-4 w-4 mr-1" /> Change Password
-              </Button>
-            )}
           </div>
-          {showChangePwd && (
-            <div className="space-y-3">
-              <Input
-                label="Current Password"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
-              />
-              <Input
-                label="New Password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Min 8 characters"
-              />
-              <Input
-                label="Confirm New Password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repeat new password"
-              />
-              <div className="flex space-x-3 pt-2">
-                <Button onClick={handleChangePassword} loading={changingPwd}>
-                  Update Password
-                </Button>
-                <Button variant="outline" onClick={() => { setShowChangePwd(false); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); }}>
-                  Cancel
-                </Button>
+        )}
+
+        {/* Security Tab */}
+        {activeTab === "security" && (
+          <div className="space-y-6">
+            <div className="bg-white border rounded-xl p-6">
+              <div className="flex items-center space-x-2 mb-6">
+                <Lock className="h-5 w-5 text-gray-400" />
+                <h2 className="text-lg font-semibold">Change Password</h2>
+              </div>
+              <div className="space-y-4 max-w-md">
+                <Input
+                  label="Current Password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                />
+                <Input
+                  label="New Password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min 8 characters, uppercase, number"
+                />
+                <Input
+                  label="Confirm New Password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repeat new password"
+                />
+                <div className="flex space-x-3 pt-2">
+                  <Button onClick={handleChangePassword} loading={changingPwd}>
+                    Update Password
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => { setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); }}
+                  >
+                    Clear
+                  </Button>
+                </div>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Addresses */}
-        <div className="bg-white border rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">My Addresses</h2>
-            <Button variant="outline" size="sm" onClick={() => setShowAddressForm(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Add Address
-            </Button>
-          </div>
-
-          <div className="space-y-3">
-            {addresses.map((addr: any) => (
-              <div key={addr.id} className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="bg-white border rounded-xl p-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="h-4 w-4 text-primary-600" />
-                    <span className="font-medium text-sm">{addr.label}</span>
-                    {addr.isDefault && <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">Default</span>}
-                  </div>
-                  <p className="text-sm text-gray-600 ml-6">{addr.street}, {addr.city}, {addr.state} - {addr.pincode}</p>
+                  <h2 className="text-lg font-semibold text-red-600">Sign Out</h2>
+                  <p className="text-sm text-gray-500 mt-1">Sign out from all devices</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {!addr.isDefault && (
-                    <button onClick={() => handleSetDefault(addr.id)} className="text-xs text-primary-600 hover:underline">Set Default</button>
-                  )}
-                  <button onClick={() => handleDeleteAddress(addr.id)} className="text-red-500 hover:bg-red-50 p-1 rounded">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                <Button
+                  variant="destructive"
+                  onClick={async () => { await logout(); router.push("/"); }}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
               </div>
-            ))}
-            {addresses.length === 0 && (
-              <p className="text-gray-500 text-sm text-center py-4">No addresses saved yet</p>
-            )}
+            </div>
           </div>
-        </div>
-
-        <div className="mt-6">
-          <Button variant="destructive" onClick={async () => { await logout(); router.push("/"); }}>
-            Logout
-          </Button>
-        </div>
+        )}
       </main>
 
       <Dialog open={showAddressForm} onClose={() => setShowAddressForm(false)} title="Add Address">
@@ -313,20 +397,25 @@ export default function ProfilePage() {
           <select
             value={addressForm.label}
             onChange={(e) => setAddressForm({ ...addressForm, label: e.target.value })}
-            className="w-full border rounded-lg px-3 py-2 text-sm"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="Home">Home</option>
             <option value="Work">Work</option>
             <option value="Other">Other</option>
           </select>
-          <Input placeholder="Street" value={addressForm.street} onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })} />
+          <Input placeholder="Street address" value={addressForm.street} onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })} />
           <div className="grid grid-cols-2 gap-3">
             <Input placeholder="City" value={addressForm.city} onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })} />
             <Input placeholder="State" value={addressForm.state} onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })} />
           </div>
           <Input placeholder="Pincode" value={addressForm.pincode} onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })} />
-          <label className="flex items-center space-x-2 text-sm">
-            <input type="checkbox" checked={addressForm.isDefault} onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })} />
+          <label className="flex items-center space-x-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={addressForm.isDefault}
+              onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })}
+              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
             <span>Set as default address</span>
           </label>
           <Button className="w-full" onClick={handleAddAddress}>Save Address</Button>

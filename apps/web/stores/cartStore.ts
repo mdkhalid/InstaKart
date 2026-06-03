@@ -12,6 +12,15 @@ interface CartItem {
   slug?: string;
 }
 
+interface CouponInfo {
+  code: string;
+  discountType: "PERCENTAGE" | "FIXED";
+  discountValue: number;
+  maxDiscount: number | null;
+  minOrderAmount: number | null;
+  expiresAt: string | null;
+}
+
 interface StockIssue {
   productId: string;
   name: string;
@@ -22,13 +31,20 @@ interface StockIssue {
 interface CartState {
   items: CartItem[];
   isOpen: boolean;
+  coupon: CouponInfo | null;
+  couponLoading: boolean;
   addItem: (product: any, qty?: number) => void;
   removeItem: (productId: string) => void;
   updateQty: (productId: string, qty: number) => void;
   clearCart: () => void;
   toggleCart: () => void;
   syncWithServer: () => Promise<void>;
+  syncToServer: () => Promise<void>;
   validateStock: () => Promise<StockIssue[]>;
+  applyCoupon: (code: string) => Promise<boolean>;
+  removeCoupon: () => void;
+  subtotal: () => number;
+  couponDiscount: () => number;
   total: () => number;
   itemCount: () => number;
 }
@@ -38,6 +54,8 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       isOpen: false,
+      coupon: null,
+      couponLoading: false,
 
       addItem: (product, qty = 1) => {
         const existing = get().items.find((i) => i.productId === product.id);
@@ -79,9 +97,21 @@ export const useCartStore = create<CartState>()(
               ),
             }),
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () => set({ items: [], coupon: null }),
 
       toggleCart: () => set({ isOpen: !get().isOpen }),
+
+      syncToServer: async () => {
+        const items = get().items;
+        if (items.length === 0) return;
+        // Single API call: replace entire server cart with local items
+        await api.post("/cart/sync", {
+          items: items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+          })),
+        });
+      },
 
       syncWithServer: async () => {
         try {
@@ -154,8 +184,52 @@ export const useCartStore = create<CartState>()(
         return issues;
       },
 
-      total: () =>
+      applyCoupon: async (code: string) => {
+        set({ couponLoading: true });
+        try {
+          const { data } = await api.post("/cart/coupon", { code });
+          const c = data.data;
+          set({
+            coupon: {
+              code: c.code,
+              discountType: c.discountType,
+              discountValue: Number(c.discountValue),
+              maxDiscount: c.maxDiscount ? Number(c.maxDiscount) : null,
+              minOrderAmount: c.minOrderAmount ? Number(c.minOrderAmount) : null,
+              expiresAt: c.expiresAt || null,
+            },
+            couponLoading: false,
+          });
+          return true;
+        } catch (error: any) {
+          set({ coupon: null, couponLoading: false });
+          throw new Error(error.response?.data?.message || "Invalid coupon code");
+        }
+      },
+
+      removeCoupon: () => set({ coupon: null }),
+
+      subtotal: () =>
         get().items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+
+      couponDiscount: () => {
+        const coupon = get().coupon;
+        const subtotal = get().subtotal();
+        if (!coupon) return 0;
+        if (coupon.minOrderAmount && subtotal < coupon.minOrderAmount) return 0;
+
+        if (coupon.discountType === "PERCENTAGE") {
+          const discount = subtotal * (coupon.discountValue / 100);
+          return coupon.maxDiscount ? Math.min(discount, coupon.maxDiscount) : discount;
+        }
+        return Math.min(coupon.discountValue, subtotal);
+      },
+
+      total: () => {
+        const subtotal = get().subtotal();
+        const discount = get().couponDiscount();
+        return subtotal - discount;
+      },
 
       itemCount: () =>
         get().items.reduce((sum, item) => sum + item.quantity, 0),

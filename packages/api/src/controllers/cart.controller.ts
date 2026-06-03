@@ -180,6 +180,70 @@ export const clearCart = async (req: Request, res: Response) => {
   }
 };
 
+export const syncCart = async (req: Request, res: Response) => {
+  try {
+    const { items } = req.body;
+
+    if (!Array.isArray(items)) {
+      return errorResponse(res, "Items must be an array", 400);
+    }
+
+    const userId = req.user!.userId;
+
+    // Find or create cart
+    let cart = await prisma.cart.findUnique({ where: { userId } });
+    if (!cart) {
+      cart = await prisma.cart.create({ data: { userId } });
+    }
+
+    // Validate all products in one query
+    const productIds = items.map((i: any) => i.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds }, isActive: true },
+    });
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    // Check for invalid or unavailable products
+    for (const item of items) {
+      const product = productMap.get(item.productId);
+      if (!product) {
+        return errorResponse(res, `Product ${item.productId} not found or inactive`, 404);
+      }
+      if (!product.isAvailable || product.stock < 1) {
+        return errorResponse(res, `${product.name} is out of stock`, 400);
+      }
+      if (item.quantity > product.stock) {
+        return errorResponse(res, `Insufficient stock for ${product.name}`, 400);
+      }
+    }
+
+    // Replace all cart items in a transaction
+    await prisma.$transaction(async (tx) => {
+      // Delete existing items
+      await tx.cartItem.deleteMany({ where: { cartId: cart!.id } });
+
+      // Create new items
+      for (const item of items) {
+        const product = productMap.get(item.productId)!;
+        await tx.cartItem.create({
+          data: {
+            cartId: cart!.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            price: product.salePrice || product.price,
+          },
+        });
+      }
+    });
+
+    const updatedCart = await getCartData(cart.id);
+    return successResponse(res, updatedCart, "Cart synced");
+  } catch (error) {
+    console.error("Sync cart error:", error);
+    return errorResponse(res, "Failed to sync cart", 500);
+  }
+};
+
 export const applyCoupon = async (req: Request, res: Response) => {
   try {
     const { code } = req.body;

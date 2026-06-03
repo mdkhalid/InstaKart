@@ -118,7 +118,14 @@ export default function OrderDetailPage() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>{formatPrice(order.subtotal)}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Delivery</span><span>{order.deliveryFee === 0 ? "Free" : formatPrice(order.deliveryFee)}</span></div>
-            {order.discount > 0 && <div className="flex justify-between"><span className="text-gray-500">Discount</span><span className="text-green-600">-{formatPrice(order.discount)}</span></div>}
+            {order.discount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">
+                  {order.couponCode ? `Discount (${order.couponCode})` : "Discount"}
+                </span>
+                <span className="text-green-600">-{formatPrice(order.discount)}</span>
+              </div>
+            )}
             <div className="flex justify-between"><span className="text-gray-500">Tax</span><span>{formatPrice(order.tax)}</span></div>
             <div className="flex justify-between font-semibold text-base border-t pt-2"><span>Total</span><span className="text-primary-600">{formatPrice(order.total)}</span></div>
           </div>

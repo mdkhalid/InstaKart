@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   ArrowLeft, User, Mail, Phone, Calendar, Shield,
-  Package, RefreshCw, Save, Edit3,
+  Package, RefreshCw, Save, Edit3, Camera,
 } from "lucide-react";
 import { StatusBadge, getStatusVariant } from "@/components/StatusBadge";
 import { formatPrice, formatDate } from "@/lib/utils";
@@ -26,6 +27,39 @@ export default function AdminUserDetailPage() {
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Avatar upload state
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large. Max 5MB");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    // Show local preview immediately
+    const objectUrl = URL.createObjectURL(file);
+    setLocalPreviewUrl(objectUrl);
+    setUploadingAvatar(true);
+    try {
+      const { data } = await api.post(`/admin/users/${params.id}/avatar`, formData);
+      if (data.data?.avatarUrl) {
+        setUser((prev: any) => ({ ...prev, avatarUrl: data.data.avatarUrl }));
+      }
+      toast.success("Avatar updated");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to upload avatar");
+      setLocalPreviewUrl(null);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+      setUploadingAvatar(false);
+    }
+  };
 
   // Reset password state
   const [showResetPwd, setShowResetPwd] = useState(false);
@@ -164,14 +198,50 @@ export default function AdminUserDetailPage() {
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
+        <div className="flex items-start space-x-4">
           <button
             onClick={() => router.push("/users")}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors mt-1"
             title="Back to Users"
           >
             <ArrowLeft className="h-5 w-5 text-gray-500" />
           </button>
+          <div className="relative flex-shrink-0">
+            <div className="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
+              {(localPreviewUrl || user.avatarUrl) ? (
+                <Image
+                  src={localPreviewUrl || user.avatarUrl}
+                  alt={`${user.firstName}'s avatar`}
+                  width={64}
+                  height={64}
+                  className="object-cover w-full h-full"
+                  style={{ width: "auto", height: "auto" }}
+                />
+              ) : (
+                <User className="h-8 w-8 text-primary-600" />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              className="absolute -bottom-1 -right-1 bg-primary-600 text-white rounded-full p-1.5 hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              title={uploadingAvatar ? "Uploading..." : "Upload avatar"}
+            >
+              <Camera className="h-3 w-3" />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleAvatarUpload(file);
+                e.target.value = "";
+              }}
+            />
+          </div>
           <div>
             <div className="flex items-center space-x-3">
               <h1 className="text-2xl font-bold text-gray-900">

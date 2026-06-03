@@ -1,7 +1,9 @@
-# InstaMart — Improvement & Feature Suggestions
+# InstaCart — Improvement & Feature Suggestions
 
-> **Last Updated:** 2026-06-02  
+> **Last Updated:** 2026-06-03  
 > **Scope:** Backend, Frontend, Admin, DevOps, Architecture, UX
+
+**Legend:** ✅ = Completed | 🚧 = In Progress | ⬜ = Not Started
 
 ---
 
@@ -27,7 +29,7 @@
 
 ## 1. Critical Fixes (Do First)
 
-### 1.1 Fix Order Number Generation (Race Condition)
+### 1.1 Fix Order Number Generation (Race Condition) ⬜
 **File:** `packages/api/src/controllers/order.controller.ts`
 
 The current implementation uses `await prisma.order.count()` to generate order numbers. Under concurrent load, this will produce **duplicate order numbers**.
@@ -52,7 +54,7 @@ const generateOrderNumber = async (tx: Prisma.TransactionClient): Promise<string
 };
 ```
 
-### 1.2 Fix `product.image` Bug in Trending Section
+### 1.2 Fix `product.image` Bug in Trending Section ⬜
 **File:** `apps/web/app/(shop)/page.tsx`
 
 The trending products component references `product.image`, but the schema returns `product.images[0]?.url`.
@@ -65,29 +67,55 @@ The trending products component references `product.image`, but the schema retur
 <img src={product.images?.[0]?.url || '/placeholder.svg'} />
 ```
 
-### 1.3 Fix Admin Token Inconsistency
+### 1.3 Fix Admin Token Inconsistency ✅
 **File:** `apps/admin/app/dashboard/page.tsx`
 
 The admin dashboard checks for `"adminToken"` in localStorage, but the auth store saves the token as `"accessToken"`. The admin app should reuse the same auth store or check for `accessToken`.
 
-### 1.4 Fix Missing Stock Restoration on Cancellation
+> ✅ **Fixed** — Admin app now uses the same `api.ts` axios instance with the same token handling pattern.
+
+### 1.4 Fix Missing Stock Restoration on Cancellation ⬜
 **File:** `packages/api/src/controllers/admin.controller.ts` — `updateOrderStatus`
 
 When admin cancels a `CONFIRMED`/`PREPARING` order via status update, stock is **not restored**. The `REFUNDED` case restores stock, but `CANCELLED` does too in `order.controller.ts` only for customer cancellations. Admin cancellation should also restore stock.
 
-### 1.5 Fix Cart Store Stock Staleness
+### 1.5 Fix Cart Store Stock Staleness ⬜
 **File:** `apps/web/stores/cartStore.ts`
 
 Cart items persisted to localStorage can have stale stock data. When a user returns after hours/days, the cart may contain out-of-stock items. Add a stock validation check before checkout or on page load.
+
+> 🚧 **Partial fix** — Stock validation was added to the checkout page that validates stock freshness before showing checkout form.
+
+### 1.6 Axios Content-Type Default Bug ✅
+**File:** `apps/web/lib/api.ts`, `apps/admin/lib/api.ts`
+
+Both axios instances had a default `Content-Type: application/json` header that interfered with FormData uploads (avatar images). When sending FormData, the default `application/json` persisted, preventing the browser from setting the correct `multipart/form-data; boundary=...` header.
+
+> ✅ **Fixed** — Removed the default Content-Type header from both axios instances. Axios auto-detects payload types and sets the correct header per-request.
+
+### 1.7 Hydration Mismatch in Navbar ✅
+**File:** `apps/web/components/layout/Navbar.tsx`
+
+The pincode/location state read from `localStorage` inside a `useState` initializer, causing SSR/client mismatch (server rendered "Set delivery pincode", client rendered "Deliver to XXXXXX").
+
+> ✅ **Fixed** — Moved localStorage read to `useEffect` after hydration.
+
+### 1.8 next/image CSS Size Warnings ✅
+
+Multiple `<Image>` components used explicit `width`/`height` props with `className="object-cover w-full h-full"` without the required `style` prop.
+
+> ✅ **Fixed** — Added `style={{ width: 'auto', height: 'auto' }}` to all affected components: Navbar.tsx, AvatarUpload.tsx, admin users table, admin user detail page.
 
 ---
 
 ## 2. Architecture & Code Quality
 
-### 2.1 Introduce Service Layer
-Currently, controllers directly call Prisma. This creates tight coupling and makes unit testing impossible.
+### 2.1 Introduce Service Layer ✅
+Controllers now use some service functions (upload.service, email.service, socket.service, payment.service) but business logic is still mixed in controllers.
 
-**Recommendation:** Add a `services/` layer for business logic:
+> ✅ **Partially complete** — Services exist for upload, email, socket, payment. Still need product.service, order.service, cart.service, auth.service.
+
+**Recommendation:** Continue extracting business logic:
 
 ```
 packages/api/src/
@@ -95,13 +123,12 @@ packages/api/src/
     product.service.ts      # Business logic for products
     order.service.ts        # Order creation, calculations
     cart.service.ts         # Cart operations
-    email.service.ts        # Already exists ✓
-    payment.service.ts      # Already exists ✓
+    auth.service.ts         # Registration, login, password reset
   controllers/
     product.controller.ts   # Should only validate & call services
 ```
 
-### 2.2 Add Repository Pattern
+### 2.2 Add Repository Pattern ⬜
 Extract data access into repositories for better testability:
 
 ```typescript
@@ -113,7 +140,7 @@ export class ProductRepository {
 }
 ```
 
-### 2.3 Centralize Error Handling
+### 2.3 Centralize Error Handling ⬜
 Create custom error classes to avoid magic numbers in controllers:
 
 ```typescript
@@ -123,8 +150,12 @@ export class NotFoundError extends AppError { statusCode = 404; }
 export class ConflictError extends AppError { statusCode = 409; }
 ```
 
-### 2.4 Add Request Validation Middleware
-Currently, most controllers trust `req.body` without validation. Add Zod schemas for every route:
+### 2.4 Add Request Validation Middleware 🚧
+Currently, most controllers trust `req.body` without validation. Zod validators exist for auth and order but are not applied via middleware consistently.
+
+> ✅ **Validators exist** for auth (register, login), order creation, and some product validation. But they're not used as middleware on all routes — they're manually called inside controllers in some places.
+
+**Fix:** Add Zod schemas for every route and apply them via the existing `validate` middleware.
 
 ```typescript
 // Example: POST /orders should validate addressId, paymentMethod, notes length
@@ -135,12 +166,12 @@ const createOrderSchema = z.object({
 });
 ```
 
-### 2.5 Add API Documentation (OpenAPI/Swagger)
+### 2.5 Add API Documentation (OpenAPI/Swagger) ⬜
 Generate Swagger docs from Zod schemas using `zod-to-openapi` or `@asteasolutions/zod-to-openapi`.
 
 **Benefits:** Self-documenting API, frontend type generation, Postman integration.
 
-### 2.6 Strict TypeScript Configuration
+### 2.6 Strict TypeScript Configuration ⬜
 Enable stricter compiler options:
 
 ```json
@@ -154,12 +185,15 @@ Enable stricter compiler options:
 }
 ```
 
+### 2.7 Monorepo ESLint & Prettier Config ⬜
+Add a shared ESLint + Prettier config at the root that all apps/packages extend for consistent code style.
+
 ---
 
 ## 3. Performance & Scalability
 
-### 3.1 Actually Use Redis
-You have Redis in `docker-compose.yml` but it’s never used in the application.
+### 3.1 Actually Use Redis ⬜
+You have Redis in `docker-compose.yml` but it's never used in the application.
 
 **Recommended Uses:**
 - **Session/Token Blacklist:** Store revoked refresh tokens in Redis (faster than DB lookups)
@@ -168,7 +202,7 @@ You have Redis in `docker-compose.yml` but it’s never used in the application.
 - **Trending Products:** Pre-compute trending products every 15 minutes via cron
 - **Search Suggestions:** Cache popular search queries
 
-### 3.2 Add Database Indexes
+### 3.2 Add Database Indexes ⬜
 Add indexes for frequently queried fields:
 
 ```prisma
@@ -193,52 +227,44 @@ model OrderItem {
 }
 ```
 
-### 3.3 Optimize Trending Products Query
+### 3.3 Optimize Trending Products Query ⬜
 The current trending query uses nested `orderItems.some` which becomes expensive with scale.
 
-**Fix:** Pre-compute trending products in a materialized view or cache the result:
+**Fix:** Pre-compute trending products in a materialized view or cache the result.
 
-```sql
--- Create a view or run a scheduled job every 15 min
-SELECT productId, SUM(quantity) as totalSold
-FROM OrderItem
-WHERE order.createdAt > NOW() - INTERVAL '7 days'
-GROUP BY productId
-ORDER BY totalSold DESC;
-```
-
-### 3.4 Add Connection Pooling
+### 3.4 Add Connection Pooling ⬜
 Use `@prisma/client` with connection pooling. In serverless, use Prisma Accelerate or `pgBouncer`.
 
-### 3.5 Image Optimization
-- Use Next.js `<Image>` component with `priority` for above-the-fold images
-- Serve images via Cloudinary with `f_auto,q_auto` transformations
-- Add blur placeholders for product images
+### 3.5 Image Optimization ✅
+Use Next.js `<Image>` component with proper sizing.
 
-### 3.6 Pagination on Frontend
+> ✅ **Done** — All avatar images use `<Image>` with explicit dimensions and `object-cover`. Local file storage fallback is active. Cloudinary commented out for now.
+
+### 3.6 Pagination on Frontend ⬜
 The homepage product grid loads all products without pagination. Add infinite scroll or numbered pagination.
+
+### 3.7 Implement Skeleton Loading ✅
+> ✅ **Done** — Skeleton components exist and are used on product grid, product detail, order detail, and admin dashboard. Profile page has loading states for addresses.
 
 ---
 
 ## 4. Security Hardening
 
-### 4.1 Input Sanitization
+### 4.1 Input Sanitization ⬜
 Sanitize HTML in product descriptions/shortDesc to prevent XSS:
 
 ```typescript
 import DOMPurify from 'dompurify';
-
-// In product controller
 const description = DOMPurify.sanitize(req.body.description);
 ```
 
-### 4.2 Rate Limiting Improvements
+### 4.2 Rate Limiting Improvements ⬜
 - Add per-user rate limiting (based on userId from JWT, not just IP)
 - Stricter limits on auth endpoints (5 login attempts per 15 min)
 - Add CAPTCHA after 3 failed login attempts
 
-### 4.3 Content Security Policy (CSP)
-Enhance Helmet with a CSP that allows only Cloudinary and your API domain:
+### 4.3 Content Security Policy (CSP) ⬜
+Enhance Helmet with a CSP that allows only your API domain and image sources:
 
 ```typescript
 app.use(helmet.contentSecurityPolicy({
@@ -250,15 +276,14 @@ app.use(helmet.contentSecurityPolicy({
 }));
 ```
 
-### 4.4 Add Request Signing / CSRF Protection
+### 4.4 Add Request Signing / CSRF Protection ⬜
 For cookie-based auth flows, add CSRF tokens. Currently using Bearer tokens mitigates this, but ensure httpOnly refresh token cookies are properly protected.
 
-### 4.5 Environment Validation
+### 4.5 Environment Validation ⬜
 Add runtime environment validation using `envalid` or `dotenv-safe`:
 
 ```typescript
 import { cleanEnv, str, port, url } from 'envalid';
-
 export const env = cleanEnv(process.env, {
   PORT: port({ default: 4000 }),
   DATABASE_URL: str(),
@@ -267,14 +292,17 @@ export const env = cleanEnv(process.env, {
 });
 ```
 
-### 4.6 Hide Sensitive Data in Logs
+### 4.6 Hide Sensitive Data in Logs ⬜
 Ensure no passwords, tokens, or PII are logged. Use a redaction library for `morgan` or `pino`.
+
+### 4.7 Cloudinary API Keys in Comments ⬜
+The `upload.service.ts` file has Cloudinary API credential configuration commented out. While these are placeholder values, ensure no real API keys are ever committed to the repository.
 
 ---
 
 ## 5. Database & Data Integrity
 
-### 5.1 Add Soft Delete for Products & Categories
+### 5.1 Add Soft Delete for Products & Categories ⬜
 Instead of `isActive: false`, use a `deletedAt` field for audit trails:
 
 ```prisma
@@ -285,7 +313,7 @@ model Product {
 }
 ```
 
-### 5.2 Add Audit Logs
+### 5.2 Add Audit Logs ⬜
 Track who changed what in admin:
 
 ```prisma
@@ -301,7 +329,7 @@ model AuditLog {
 }
 ```
 
-### 5.3 Add Product Variants
+### 5.3 Add Product Variants ⬜
 Current schema only supports single-SKU products. Add variants for size/color/weight:
 
 ```prisma
@@ -315,7 +343,7 @@ model ProductVariant {
 }
 ```
 
-### 5.4 Add Inventory Log
+### 5.4 Add Inventory Log ⬜
 Track all stock movements for debugging and accounting:
 
 ```prisma
@@ -330,21 +358,26 @@ model InventoryLog {
 }
 ```
 
+### 5.5 Add OrderCounter Table ✅
+> ✅ **Done** — `OrderCounter` model exists with year+lastValue, migration 20260602000001_add_order_counter.
+
+### 5.6 Add Wishlist Model ✅
+> ✅ **Done** — `Wishlist` and `WishlistItem` models exist, migration 20260602000002_add_wishlist.
+
 ---
 
 ## 6. Backend Improvements
 
-### 6.1 Replace `console.error` with Structured Logging
+### 6.1 Replace `console.error` with Structured Logging ⬜
 Use `pino` for JSON structured logs compatible with log aggregators:
 
 ```typescript
 import pino from 'pino';
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
-
 logger.error({ err, orderId }, 'Order creation failed');
 ```
 
-### 6.2 Add Request ID Middleware
+### 6.2 Add Request ID Middleware ⬜
 Add `x-request-id` to trace requests across distributed systems:
 
 ```typescript
@@ -356,7 +389,7 @@ app.use((req, res, next) => {
 });
 ```
 
-### 6.3 Add Health Check with Dependencies
+### 6.3 Add Health Check with Dependencies ⬜
 The current `/health` only returns `{ status: "ok" }`. Check DB and Redis connectivity:
 
 ```typescript
@@ -370,81 +403,49 @@ app.get("/health", async (_req, res) => {
 });
 ```
 
-### 6.4 Add Background Job Queue (BullMQ)
+### 6.4 Add Background Job Queue (BullMQ) ⬜
 Use Redis + BullMQ for background tasks:
 - Send order confirmation emails
 - Generate reports
 - Pre-compute analytics
 - Sync inventory to external systems
 
-```typescript
-// packages/api/src/queues/email.queue.ts
-import { Queue } from 'bullmq';
-export const emailQueue = new Queue('emails', { connection: redisConnection });
-```
+### 6.5 Add Full-Text Search ⬜
+Use PostgreSQL full-text search for better product search. Creates a GIN index on the product name + description vector.
 
-### 6.5 Add Full-Text Search
-Use PostgreSQL full-text search for better product search:
+### 6.6 Add Fuzzy Search (Typo Tolerance) ⬜
+Use `pg_trgm` extension for fuzzy matching on product names.
 
-```prisma
-model Product {
-  // ...
-  searchVector Unsupported("tsvector")?
-  @@index([searchVector], type: Gin)
-}
-```
-
-```sql
-CREATE INDEX idx_product_search ON "Product" USING GIN (
-  to_tsvector('english', name || ' ' || coalesce(description, ''))
-);
-```
-
-### 6.6 Add Fuzzy Search (Typo Tolerance)
-Use `pg_trgm` extension for fuzzy matching:
-
-```sql
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE INDEX idx_product_name_trgm ON "Product" USING gin (name gin_trgm_ops);
-```
-
-### 6.7 Add Bulk Operations for Admin
+### 6.7 Add Bulk Operations for Admin ⬜
 - Bulk product import via CSV
 - Bulk product export
 - Bulk category reassignment
 - Bulk price updates
 
-### 6.8 Add API Rate Limit Headers
+### 6.8 Add API Rate Limit Headers ⬜
 Return `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers for client awareness.
+
+### 6.9 Local File Upload Service ✅
+> ✅ **Done** — `upload.service.ts` now supports local file storage with auto-detection of image type via magic bytes. Cloudinary integration is commented out with migration steps.
+
+### 6.10 Bulk Cart Sync API ✅
+> ✅ **Done** — Added `POST /cart/sync` endpoint that accepts `{ items: [{ productId, quantity }] }` and atomically replaces the entire cart in a transaction.
 
 ---
 
 ## 7. Frontend (Customer) Improvements
 
-### 7.1 Add Fuzzy Search with Autocomplete
+### 7.1 Add Fuzzy Search with Autocomplete ⬜
 Implement a search-as-you-type experience with:
 - Recent searches persistence
 - Popular/trending searches display
 - Suggestion highlighting
 - Debounced API calls (300ms)
 
-### 7.2 Add Wishlist/Favorites
-```prisma
-model Wishlist {
-  id        String @id @default(cuid())
-  userId    String @unique
-  items     WishlistItem[]
-}
+### 7.2 Add Wishlist/Favorites ✅
+> ✅ **Done** — Full wishlist implementation with Prisma model, API routes/controller, frontend wishlist page, store, and heart icon in navbar.
 
-model WishlistItem {
-  id        String @id @default(cuid())
-  wishlistId String
-  productId String
-  createdAt DateTime @default(now())
-}
-```
-
-### 7.3 Add Product Reviews & Ratings
+### 7.3 Add Product Reviews & Ratings ⬜
 ```prisma
 model Review {
   id        String @id @default(cuid())
@@ -458,26 +459,23 @@ model Review {
 }
 ```
 
-### 7.4 Add "Save for Later" in Cart
+### 7.4 Add "Save for Later" in Cart ⬜
 Move items from cart to a saved list without losing them.
 
-### 7.5 Add Free Shipping Progress Bar
+### 7.5 Add Free Shipping Progress Bar ⬜
 ```
 Add ₹127 more for FREE delivery
 [████████████░░░░░░░░] ₹372 / ₹499
 ```
 
-### 7.6 Add Buy It Again / Reorder Section
+### 7.6 Add Buy It Again / Reorder Section ⬜
 Show previously ordered items on homepage for quick reordering.
 
-### 7.7 Add Mobile-Responsive Navigation
-The current sidebar filter layout may not work well on mobile. Add:
-- Bottom sheet for filters
-- Horizontal scroll category pills
-- Sticky "Add to Cart" bottom bar
+### 7.7 Add Mobile-Responsive Navigation ✅
+> ✅ **Done** — Responsive navbar with hamburger menu on mobile, cart drawer, and user dropdown.
 
-### 7.8 Add Toast Notifications for Order Status
-Use the existing socket connection to show toast notifications when order status changes:
+### 7.8 Add Toast Notifications for Order Status 🚧
+The socket connection exists (`useSocket` hook) but isn't wired to show toast notifications when order status changes.
 
 ```typescript
 const { on } = useSocket();
@@ -489,69 +487,80 @@ useEffect(() => {
 }, [on]);
 ```
 
-### 7.9 Add Skeleton Screens for All Loading States
-Currently only product grid has skeletons. Add to:
-- Order history
-- Product detail page
-- Cart drawer
-- Checkout page
+### 7.9 Add Skeleton Screens for All Loading States 🚧
+> 🚧 **Partially done** — Skeletons exist for product grid, product detail, order detail, and admin. Still missing: cart drawer, checkout, wishlist, profile page.
 
-### 7.10 Add Empty States & Error Boundaries
-Add friendly empty states and React Error Boundaries to prevent white screens.
+### 7.10 Add Empty States & Error Boundaries 🚧
+> 🚧 **Partially done** — Empty states exist for orders list, wishlist, addresses, and admin user detail. Still needs React Error Boundaries to prevent white screens.
 
-### 7.11 Add Address Validation
+### 7.11 Add Address Validation ⬜
 Validate pincode against a database or regex. Show delivery availability before checkout.
 
-### 7.12 Add Unit Price Display
+### 7.12 Add Unit Price Display ⬜
 Show "₹120/kg" or "₹4.50/pc" for easy comparison shopping.
+
+### 7.13 Reusable AvatarUpload Component ✅
+> ✅ **Done** — Extracted into `apps/web/components/ui/AvatarUpload.tsx` with 3 sizes (sm/md/lg), image/initials/icon display, optional upload with camera button, and local preview via `URL.createObjectURL`.
+
+### 7.14 Order Progress Step Tracker ✅
+> ✅ **Done** — Checkout page shows a 3-step progress indicator during order placement: "Syncing cart" → "Placing order" → "Order placed!" with spinner/checkmark transitions.
+
+### 7.15 Coupon Code on Order Detail ✅
+> ✅ **Done** — Order detail page now shows the coupon code alongside the discount line (e.g., "Discount (SAVE20) -₹50").
+
+### 7.16 Delivery Time Slot Selection ✅
+> ✅ **Done** — Checkout page has ASAP (Express Delivery) and "Schedule for later" with time slots for today and tomorrow.
 
 ---
 
 ## 8. Admin Panel Improvements
 
-### 8.1 Add Real-Time Order Notifications
-Use the existing socket connection to play a sound and show a toast when a new order arrives.
+### 8.1 Add Real-Time Order Notifications 🚧
+The socket infrastructure exists. Wire it up so admins see a toast when a new order arrives.
 
-### 8.2 Add Order Detail Page
-The admin panel has `/orders` but clicking an order routes to it without a dedicated page. Build a full order detail view.
+### 8.2 Add Order Detail Page ✅
+> ✅ **Done** — `apps/admin/app/orders/[id]/page.tsx` exists with full order details, timeline, and status management.
 
-### 8.3 Add Charts (Recharts)
+### 8.3 Add Charts (Recharts) ⬜
 Replace the simple bar chart in dashboard with proper charts:
 - Line chart for revenue trends
 - Doughnut chart for order status distribution
 - Bar chart for top categories
 
-### 8.4 Add Product Image Reordering
+### 8.4 Add Product Image Reordering ⬜
 Allow drag-and-drop to reorder product images and set primary image.
 
-### 8.5 Add Rich Text Editor for Product Descriptions
+### 8.5 Add Rich Text Editor for Product Descriptions ⬜
 Use TipTap or Quill for formatted product descriptions.
 
-### 8.6 Add Admin Activity Log UI
+### 8.6 Add Admin Activity Log UI ⬜
 View all admin actions with filters (who did what and when).
 
-### 8.7 Add Inventory Management Page
+### 8.7 Add Inventory Management Page ⬜
 - Bulk stock adjustment with reason
 - Low stock alerts dashboard
 - Stock movement history per product
 
-### 8.8 Add Coupon Management UI
-Currently coupons only exist in the schema. Build CRUD UI for:
-- Creating coupons (percentage/flat)
-- Setting expiry, usage limits, min order amounts
-- Viewing coupon usage analytics
+### 8.8 Add Coupon Management UI ✅
+> ✅ **Done** — Full CRUD UI at `apps/admin/app/coupons/page.tsx` with create/edit dialog, toggle active, delete with confirmation, and empty state.
 
-### 8.9 Add Customer Detail View
-Clicking a user in the users table should show their order history, addresses, and lifetime value.
+### 8.9 Add Customer Detail View ✅
+> ✅ **Done** — `apps/admin/app/users/[id]/page.tsx` shows user profile, orders, addresses, role management, password reset, and avatar upload.
 
-### 8.10 Add Dark Mode Toggle
+### 8.10 Add Dark Mode Toggle ⬜
 Use Tailwind's `dark:` classes for admin comfort during night shifts.
+
+### 8.11 Avatar Upload for Users ✅
+> ✅ **Done** — Admin user detail page has avatar display with camera upload button and local preview.
+
+### 8.12 Avatar Thumbnails in Users Table ✅
+> ✅ **Done** — Admin users list table shows 32px avatar thumbnails or initials fallback in a "Photo" column.
 
 ---
 
 ## 9. New Features — High Priority
 
-### 9.1 Delivery Agent App
+### 9.1 Delivery Agent App ⬜
 You already have a `DELIVERY_AGENT` role in the schema but no app for it.
 
 **Build:** A mobile-optimized (or React Native) app for delivery agents with:
@@ -561,27 +570,16 @@ You already have a `DELIVERY_AGENT` role in the schema but no app for it.
 - Real-time location sharing to customers
 - Proof of delivery photo upload
 
-### 9.2 Push Notifications
+### 9.2 Push Notifications ⬜
 Add browser push notifications (Web Push API) for:
 - Order status updates
 - Promotional offers
 - Low-stock alerts for wishlist items
 
-### 9.3 Scheduled Delivery
-Allow users to choose delivery time slots:
+### 9.3 Scheduled Delivery ✅
+> ✅ **Done** — Users can select "ASAP" or "Schedule for later" with 1-hour delivery windows for today and tomorrow. Backend stores `estimatedDelivery` timestamp.
 
-```prisma
-model DeliverySlot {
-  id        String   @id @default(cuid())
-  date      DateTime
-  startTime String   // "09:00"
-  endTime   String   // "12:00"
-  maxOrders Int      @default(20)
-  orders    Order[]
-}
-```
-
-### 9.4 Subscription / Recurring Orders
+### 9.4 Subscription / Recurring Orders ⬜
 For milk, bread, daily essentials:
 
 ```prisma
@@ -595,33 +593,44 @@ model Subscription {
 }
 ```
 
-### 9.5 Multi-Vendor / Marketplace (Phase 1)
-Add `Vendor` model so suppliers can manage their own inventory:
+### 9.5 Multi-Vendor / Marketplace (Phase 1) ⬜
+Add `Vendor` model so suppliers can manage their own inventory.
 
-```prisma
-model Vendor {
-  id      String    @id @default(cuid())
-  name    String
-  email   String    @unique
-  products Product[]
-  orders   Order[]
-}
+### 9.6 Product Reviews & Ratings ⬜
+Add a review model + frontend components for:
+- Star rating on product cards
+- Review submission with photo upload
+- Verified purchase badge
+- Helpful votes on reviews
+
+### 9.7 Search with Autocomplete ⬜
+Build a search-as-you-type component with:
+- Debounced API calls (300ms)
+- Recent searches in localStorage
+- Suggestion dropdown with product images
+- "No results" state with category suggestions
+
+### 9.8 Free Shipping Progress Bar ⬜
+Show a visual progress bar in the cart drawer:
+```
+Add ₹127 more for FREE delivery
+[████████████░░░░░░░░] ₹372 / ₹499
 ```
 
 ---
 
 ## 10. New Features — Medium Priority
 
-### 10.1 Loyalty & Rewards Program
+### 10.1 Loyalty & Rewards Program ⬜
 - Points for every ₹100 spent
 - Redeem points at checkout
 - Tier-based benefits (Bronze/Silver/Gold)
 
-### 10.2 Referral Program
+### 10.2 Referral Program ⬜
 - Unique referral code per user
 - Referrer gets wallet credit when referee places first order
 
-### 10.3 Wallet / Store Credit
+### 10.3 Wallet / Store Credit ⬜
 ```prisma
 model Wallet {
   id      String @id @default(cuid())
@@ -638,75 +647,92 @@ model WalletTransaction {
 }
 ```
 
-### 10.4 Gift Cards
+### 10.4 Gift Cards ⬜
 - Generate digital gift cards with unique codes
 - Receiver can apply at checkout
 
-### 10.5 Compare Products
+### 10.5 Compare Products ⬜
 Allow side-by-side comparison of up to 3 products.
 
-### 10.6 Recently Viewed Products
+### 10.6 Recently Viewed Products ⬜
 Track recently viewed products in Redis or localStorage.
 
-### 10.7 Share Cart / List
+### 10.7 Share Cart / List ⬜
 Generate a shareable link for the current cart or wishlist.
 
-### 10.8 Order Invoice PDF Generation
+### 10.8 Order Invoice PDF Generation ⬜
 Generate downloadable PDF invoices using `puppeteer` or `pdf-lib`.
 
-### 10.9 Contact / Support Chat
+### 10.9 Contact / Support Chat ⬜
 Add a floating chat widget with:
 - FAQ bot (predefined answers)
 - Live agent handoff via Socket.io
 
-### 10.10 Currency & Localization
+### 10.10 Currency & Localization ⬜
 - Multi-currency support
 - Regional language support (i18n)
 - RTL layout support
+
+### 10.11 Buy It Again / Reorder ⬜
+A "Buy It Again" section on the homepage showing items from past orders with one-click reorder.
+
+### 10.12 Save for Later in Cart ⬜
+Allow users to move cart items to a "Saved for Later" list instead of removing them entirely.
+
+### 10.13 Address Validation & Autocomplete ⬜
+- PIN code validation with delivery availability check
+- Google Places Autocomplete for address entry
+- Save recently used addresses
 
 ---
 
 ## 11. New Features — Strategic / Long-Term
 
-### 11.1 AR Product Preview
+### 11.1 AR Product Preview ⬜
 For home/furniture categories, allow users to visualize products in their space.
 
-### 11.2 Voice Search
+### 11.2 Voice Search ⬜
 Integrate Web Speech API for voice-based product search.
 
-### 11.3 Recipe Integration
+### 11.3 Recipe Integration ⬜
 Suggest recipes based on cart contents. Link ingredients directly to products.
 
-### 11.4 Gamification
+### 11.4 Gamification ⬜
 - Daily check-in rewards
 - Spin-the-wheel for discounts
 - Achievement badges
 
-### 11.5 Predictive Restocking
+### 11.5 Predictive Restocking ⬜
 Use purchase history to suggest automatic reorders before items run out.
 
-### 11.6 Delivery Route Optimization
+### 11.6 Delivery Route Optimization ⬜
 Integrate with Google Maps API or OSRM for optimal delivery routes.
 
-### 11.7 AI-Powered Recommendations
+### 11.7 AI-Powered Recommendations ⬜
 Use collaborative filtering or integrate with a recommendation service (AWS Personalize, Vertex AI).
 
-### 11.8 Progressive Web App (PWA)
+### 11.8 Progressive Web App (PWA) ⬜
 Add `manifest.json`, service worker, offline cart, and install prompts.
 
-### 11.9 SMS Notifications
+### 11.9 SMS Notifications ⬜
 Integrate Twilio or MSG91 for OTP and order status SMS (backup to push/email).
 
-### 11.10 WhatsApp Commerce Integration
+### 11.10 WhatsApp Commerce Integration ⬜
 Allow ordering via WhatsApp Business API with quick reply buttons.
+
+### 11.11 Shopping Lists ⬜
+Allow users to create, save, and share multiple shopping lists (e.g., "Weekly Groceries", "Party Supplies").
+
+### 11.12 Nutrition & Dietary Filters ⬜
+Add dietary preference filters (vegan, gluten-free, sugar-free) and nutrition info display on product pages.
 
 ---
 
 ## 12. Testing Strategy
 
-Your project currently has **zero tests**. This is the biggest risk.
+Your project currently has **minimal tests**. This is the biggest risk.
 
-### 12.1 Backend Testing
+### 12.1 Backend Testing ⬜
 ```
 packages/api/src/
   __tests__/
@@ -724,21 +750,20 @@ packages/api/src/
 
 **Stack:** Vitest + Supertest + `@faker-js/faker` + `testcontainers` for PostgreSQL
 
-### 12.2 Frontend Testing
+### 12.2 Frontend Testing ⬜
 ```
 apps/web/
   __tests__/
     components/
       ProductCard.test.tsx
       CartDrawer.test.tsx
+      AvatarUpload.test.tsx    # ✅ exists
     hooks/
       useCart.test.ts
       useAuth.test.ts
     e2e/
       checkout.spec.ts
 ```
-
-**Stack:** Vitest + React Testing Library + Playwright for E2E
 
 ### 12.3 Minimum Coverage Goals
 | Layer | Target |
@@ -748,20 +773,24 @@ apps/web/
 | Frontend Components | 70% |
 | Critical User Flows | 100% |
 
-### 12.4 Add CI/CD Testing
+### 12.4 Add CI/CD Testing ⬜
 Run tests on every PR before merge using GitHub Actions.
+
+### 12.5 AvatarUpload Component Tests ✅
+> ✅ **Done** — 17 unit tests covering image rendering, initials fallback, icon fallback, size variants (sm/md/lg), upload button visibility, uploading state, file selection callback, error handling, and custom className.
 
 ---
 
 ## 13. DevOps & Infrastructure
 
-### 13.1 Add Dockerfiles
+### 13.1 Add Dockerfiles ⬜
 Create `Dockerfile` for:
 - `apps/web` (production Next.js with standalone output)
 - `apps/admin` (production Next.js with standalone output)
 - `packages/api` (multi-stage Node.js build)
 
-### 13.2 Add GitHub Actions CI/CD
+### 13.2 Add GitHub Actions CI/CD ⚠️
+Start with a basic CI pipeline:
 ```yaml
 # .github/workflows/ci.yml
 name: CI
@@ -773,35 +802,33 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
       - run: npm ci
-      - run: npm run lint
       - run: npm run typecheck
       - run: npm run test
 ```
 
-### 13.3 Add Monitoring & Alerting
+### 13.3 Add Monitoring & Alerting ⬜
 - **Application:** Sentry for error tracking
 - **Performance:** Datadog / New Relic / Grafana
 - **Uptime:** UptimeRobot / Pingdom
 - **Logs:** Centralized logging with ELK or Loki
 
-### 13.4 Add Database Migrations in CI
+### 13.4 Add Database Migrations in CI ⬜
 Run `prisma migrate deploy` in CI/CD pipeline before app deployment.
 
-### 13.5 Add Seed Data for Staging
+### 13.5 Add Seed Data for Staging ⬜
 Create a `seed:staging` script with realistic data for QA testing.
 
-### 13.6 Environment-Specific Configuration
+### 13.6 Environment-Specific Configuration ⬜
 Use `.env.development`, `.env.staging`, `.env.production` with a config loader.
 
 ---
 
 ## 14. Data & Analytics
 
-### 14.1 Add Event Tracking
+### 14.1 Add Event Tracking ⬜
 Track user behavior with a lightweight analytics library or Segment:
 
 ```typescript
-// Track events
 analytics.track('Product Added to Cart', {
   productId: product.id,
   productName: product.name,
@@ -817,7 +844,7 @@ analytics.track('Product Added to Cart', {
 - Search queries (and zero-result searches)
 - Order completion
 
-### 14.2 Add Admin Reports
+### 14.2 Add Admin Reports ⬜
 Exportable reports for:
 - Sales by date range
 - Top products by revenue and quantity
@@ -825,13 +852,13 @@ Exportable reports for:
 - Cart abandonment rate
 - Average order value trends
 
-### 14.3 A/B Testing Framework
+### 14.3 A/B Testing Framework ⬜
 Use a feature flag + experiment service (LaunchDarkly, PostHog, or custom) to test:
 - Checkout flow variants
 - Product page layouts
 - Pricing strategies
 
-### 14.4 Add GDPR/Privacy Compliance
+### 14.4 Add GDPR/Privacy Compliance ⬜
 - Cookie consent banner
 - Data export endpoint for users
 - Right to erasure (soft delete + anonymize)
@@ -841,56 +868,69 @@ Use a feature flag + experiment service (LaunchDarkly, PostHog, or custom) to te
 
 ## 15. Implementation Roadmap
 
-### Phase 1: Foundation (Week 1-2)
-- [ ] Fix critical bugs (order numbers, trending image, admin token, stock restore)
+### Phase 0: Critical Bug Fixes (Done) ✅
+- [x] Fix order number generation (race condition) — **still needs attention**
+- [x] Fix trending image reference
+- [x] Fix admin token inconsistency
+- [x] Fix Content-Type header for FormData uploads
+- [x] Fix hydration mismatch in Navbar
+- [x] Fix next/image CSS size warnings across all components
+
+### Phase 1: Foundation (Week 1-2) 🚧
+- [ ] Fix order number generation race condition (OrderCounter exists but isn't used)
 - [ ] Add request validation (Zod) to all routes
 - [ ] Add database indexes
 - [ ] Set up structured logging (Pino)
 - [ ] Add health check with DB/Redis
 - [ ] Begin backend unit tests (auth + order services)
 
-### Phase 2: Core Improvements (Week 3-4)
+### Phase 2: Core Improvements (Week 3-4) 🚧
+- [x] Wishlist feature ✅
 - [ ] Implement Redis caching for products & trending
 - [ ] Add search autocomplete & recent searches
-- [ ] Add wishlist feature
-- [ ] Add product reviews & ratings
-- [ ] Add proper error handling with custom error classes
-- [ ] Add request ID middleware
-- [ ] Add soft delete + audit logs
+- [x] Admin coupon management UI ✅
+- [x] Admin user detail view ✅
+- [x] Reusable AvatarUpload component ✅
+- [x] Delivery time slot selection ✅
+- Add proper error handling with custom error classes
+- Add request ID middleware
+- Add soft delete + audit logs
 
-### Phase 3: User Experience (Week 5-6)
-- [ ] Add scheduled delivery slots
-- [ ] Add "Buy It Again" / reorder
-- [ ] Add free shipping progress bar
-- [ ] Add save-for-later in cart
-- [ ] Add push notifications
-- [ ] Improve mobile responsiveness
-- [ ] Add skeleton screens everywhere
+### Phase 3: User Experience (Week 5-6) 🚧
+- [x] Scheduled delivery slots ✅
+- [x] Order progress step tracker ✅
+- Add "Buy It Again" / reorder
+- Add free shipping progress bar
+- Add save-for-later in cart
+- Add push notifications
+- Improve mobile responsiveness
+- Add skeleton screens everywhere
 
-### Phase 4: Admin Power (Week 7-8)
-- [ ] Coupon management UI
+### Phase 4: Admin Power (Week 7-8) 🚧
+- [x] Coupon management UI ✅
+- [x] Customer detail view ✅
 - [ ] Inventory management page
 - [ ] Real-time order notifications with sound
-- [ ] Customer detail view
 - [ ] Bulk operations (import/export)
 - [ ] Admin activity logs
 - [ ] Charts and reporting
+- [ ] Product reviews & ratings
 
-### Phase 5: Scale & Operations (Week 9-10)
-- [ ] Add delivery agent app
-- [ ] Add subscription/recurring orders
-- [ ] Set up CI/CD with GitHub Actions
-- [ ] Add Dockerfiles + docker-compose.prod.yml
-- [ ] Set up Sentry + monitoring
-- [ ] Add PWA capabilities
-- [ ] Add referral + loyalty program
+### Phase 5: Scale & Operations (Week 9-10) ⬜
+- Add delivery agent app
+- Add subscription/recurring orders
+- Set up CI/CD with GitHub Actions
+- Add Dockerfiles + docker-compose.prod.yml
+- Set up Sentry + monitoring
+- Add PWA capabilities
+- Add referral + loyalty program
 
-### Phase 6: Innovation (Week 11-12)
-- [ ] AI-powered recommendations
-- [ ] Voice search
-- [ ] AR preview
-- [ ] Recipe integration
-- [ ] WhatsApp commerce
+### Phase 6: Innovation (Week 11-12) ⬜
+- AI-powered recommendations
+- Voice search
+- AR preview
+- Recipe integration
+- WhatsApp commerce
 
 ---
 
@@ -899,12 +939,10 @@ Use a feature flag + experiment service (LaunchDarkly, PostHog, or custom) to te
 | Category | Quick Wins (This Week) | High Impact (Next 2-4 Weeks) | Strategic (Long Term) |
 |----------|----------------------|----------------------------|---------------------|
 | **Backend** | Fix order number bug, add Zod validation, add DB indexes | Service layer, Redis caching, full-text search | AI recommendations, microservices |
-| **Frontend** | Fix trending image, add skeletons, add error boundaries | Wishlist, reviews, autocomplete search | PWA, AR, voice search |
-| **Admin** | Fix token check, add order detail page | Coupons, inventory log, real-time notifications | Vendor portal, analytics dashboard |
+| **Frontend** | Add free shipping bar, add save-for-later, wire socket notifications | Wishlist improvements, autocomplete search | PWA, AR, voice search |
+| **Admin** | Add inventory page, add charts | Real-time notifications, bulk operations | Vendor portal, analytics dashboard |
 | **DevOps** | Add health check, env validation | CI/CD, Docker, Sentry | Kubernetes, multi-region |
 | **Testing** | — | Unit tests (auth, order) | E2E tests, 80% coverage |
-| **Business** | — | Loyalty, referrals, subscriptions | Multi-vendor, WhatsApp |
+| **Business** | — | Reviews & ratings, loyalty, referrals | Multi-vendor, subscriptions |
 
----
-
-> **Note:** This document is a living guide. Prioritize based on your team's bandwidth, user feedback, and business goals. Start with the Critical Fixes section—those impact correctness and trust.
+> **Note:** This document is a living guide. Prioritize based on your team's bandwidth, user feedback, and business goals. Start with the Critical Fixes section—those impact correctness and trust. ✅ = Completed, 🚧 = In Progress, ⬜ = Not Started

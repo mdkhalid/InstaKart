@@ -37,9 +37,13 @@ Thumbs.db
 # DeepSeek TUI
 .deepseek/
 
-# Prisma
+# Build artifacts
+*.tsbuildinfo
 
 # Turbo
 .turbo
+
+# Uploads (avatars, product images)
+uploads/
 
 # Prisma

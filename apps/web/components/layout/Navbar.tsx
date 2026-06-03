@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, User, LogOut, Package, Menu, X, Heart } from "lucide-react";
-import { useState, useEffect } from "react";
+import Image from "next/image";
+import { ShoppingCart, User, LogOut, Package, Menu, X, Heart, MapPin, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
@@ -17,6 +18,22 @@ export function Navbar() {
   const wishlistCount = useWishlistStore((s) => s.itemIds.size);
   const fetchWishlist = useWishlistStore((s) => s.fetchWishlist);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const [location, setLocation] = useState("");
+  const [editingLocation, setEditingLocation] = useState(false);
+
+  // Load saved pincode from localStorage after hydration to avoid SSR mismatch
+  useEffect(() => {
+    const saved = localStorage.getItem("deliveryPincode");
+    if (saved) setLocation(saved);
+  }, []);
+
+  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, "").slice(0, 6);
+    setLocation(value);
+    localStorage.setItem("deliveryPincode", value);
+  };
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -24,10 +41,37 @@ export function Navbar() {
     }
   }, [isAuthenticated]);
 
+  // Close user dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Close user dropdown on Escape
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setUserMenuOpen(false);
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, []);
+
   const handleLogout = async () => {
+    setUserMenuOpen(false);
     await logout();
     router.push("/login");
   };
+
+  const initials = [user?.firstName, user?.lastName]
+    .filter(Boolean)
+    .map((s) => (s as string).charAt(0).toUpperCase())
+    .join("")
+    .slice(0, 2) || "U";
 
   return (
     <>
@@ -38,6 +82,46 @@ export function Navbar() {
               <Package className="h-8 w-8 text-primary-600" />
               <span className="text-xl font-bold text-gray-900">InstaCart</span>
             </Link>
+
+            {/* Delivery Location */}
+            <div className="hidden md:flex items-center">
+              {editingLocation ? (
+                <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5">
+                  <MapPin className="h-4 w-4 text-primary-600 flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={handleLocationChange}
+                    placeholder="Enter pincode"
+                    maxLength={6}
+                    className="w-24 bg-transparent text-xs text-gray-700 ml-1.5 outline-none placeholder:text-gray-400"
+                    autoFocus
+                    onBlur={() => {
+                      if (!location) setEditingLocation(false);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setEditingLocation(false);
+                    }}
+                  />
+                </div>
+              ) : location ? (
+                <button
+                  onClick={() => setEditingLocation(true)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 text-xs text-gray-600 hover:text-primary-600 bg-gray-50 hover:bg-primary-50 border border-gray-200 rounded-lg transition-colors"
+                >
+                  <MapPin className="h-3.5 w-3.5 text-primary-600" />
+                  <span>Deliver to <strong>{location}</strong></span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setEditingLocation(true)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-primary-600 bg-gray-50 hover:bg-primary-50 border border-gray-200 rounded-lg transition-colors"
+                >
+                  <MapPin className="h-3.5 w-3.5 text-primary-600" />
+                  <span>Set delivery pincode</span>
+                </button>
+              )}
+            </div>
 
             <div className="hidden md:flex items-center space-x-4">
               <Link href="/" className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium">
@@ -53,12 +137,7 @@ export function Navbar() {
                       </span>
                     )}
                   </Link>
-                  <Link href="/orders" className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium">
-                    Orders
-                  </Link>
-                  <Link href="/profile" className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium">
-                    Profile
-                  </Link>
+
                   <button
                     onClick={toggleCart}
                     className="relative p-2 text-gray-600 hover:text-gray-900"
@@ -70,13 +149,66 @@ export function Navbar() {
                       </span>
                     )}
                   </button>
-                  <div className="flex items-center space-x-3 pl-3 border-l">
-                    <Link href="/profile" className="text-sm text-gray-700 hover:text-gray-900">
-                      {user?.firstName}
-                    </Link>
-                    <Button variant="ghost" size="sm" onClick={handleLogout}>
-                      <LogOut className="h-4 w-4" />
-                    </Button>
+                  {/* User Dropdown */}
+                  <div className="relative pl-3 border-l" ref={userMenuRef}>
+                    <button
+                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg px-2 py-1.5 transition-colors"
+                    >
+                      <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
+                        {user?.avatarUrl ? (
+                          <Image src={user.avatarUrl} alt="" width={32} height={32} className="object-cover" style={{ width: "auto", height: "auto" }} />
+                        ) : (
+                          <span className="text-xs font-semibold text-primary-700">{initials}</span>
+                        )}
+                      </div>
+                      <div className="hidden lg:block text-left">
+                        <p className="text-sm font-medium text-gray-900 leading-tight">{user?.firstName}</p>
+                        <p className="text-xs text-gray-400 leading-tight">My Account</p>
+                      </div>
+                      <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {userMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-1.5 z-50">
+                        <div className="px-4 py-2 border-b border-gray-100">
+                          <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
+                          <p className="text-xs text-gray-500">{user?.email}</p>
+                        </div>
+                        <Link
+                          href="/profile"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <User className="h-4 w-4 text-gray-400" />
+                          <span>My Profile</span>
+                        </Link>
+                        <Link
+                          href="/orders"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <ShoppingCart className="h-4 w-4 text-gray-400" />
+                          <span>My Orders</span>
+                        </Link>
+                        <Link
+                          href="/wishlist"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <Heart className="h-4 w-4 text-gray-400" />
+                          <span>Wishlist {wishlistCount > 0 && `(${wishlistCount})`}</span>
+                        </Link>
+                        <div className="border-t border-gray-100 my-1" />
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center space-x-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (

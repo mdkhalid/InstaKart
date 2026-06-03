@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { emitToUser } from "../services/socket.service";
+import { uploadImage } from "../services/upload.service";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   PENDING: ["CONFIRMED", "CANCELLED"],
@@ -19,7 +20,10 @@ export const getDashboard = async (_req: Request, res: Response) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    // Run all independent queries in parallel via Prisma
     const [
       totalRevenueAgg,
       todayRevenueAgg,
@@ -31,6 +35,7 @@ export const getDashboard = async (_req: Request, res: Response) => {
       newUsersToday,
       recentOrders,
       topProducts,
+      dailyRevenue,
     ] = await Promise.all([
       prisma.order.aggregate({
         _sum: { total: true },
@@ -43,13 +48,13 @@ export const getDashboard = async (_req: Request, res: Response) => {
       prisma.order.count(),
       prisma.order.count({ where: { status: { in: ["PENDING", "CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY"] } } }),
       prisma.product.count({ where: { isActive: true } }),
-      prisma.product.count({ where: { isActive: true, stock: { lte: prisma.product.fields.lowStockAlert } } }),
+      prisma.product.count({ where: { isActive: true, stock: { lte: 10 } } }),
       prisma.user.count({ where: { isActive: true } }),
       prisma.user.count({ where: { createdAt: { gte: today } } }),
       prisma.order.findMany({
         take: 10,
         orderBy: { createdAt: "desc" },
-        include: { user: { select: { firstName: true, lastName: true, email: true } }, items: true },
+        include: { user: { select: { firstName: true, lastName: true, email: true } } },
       }),
       prisma.orderItem.groupBy({
         by: ["productId", "productName"],
@@ -57,25 +62,31 @@ export const getDashboard = async (_req: Request, res: Response) => {
         orderBy: { _sum: { quantity: "desc" } },
         take: 5,
       }),
+      // Revenue chart - aggregate by day in SQL (much faster than JS loop)
+      // Note: Prisma uses camelCase column names by default
+      prisma.$queryRawUnsafe<Array<{ date: string; revenue: number }>>(
+        `SELECT DATE("createdAt") as date, COALESCE(SUM("total"), 0) as revenue
+         FROM "Order"
+         WHERE "paymentStatus" = 'PAID' AND "createdAt" >= $1
+         GROUP BY DATE("createdAt")
+         ORDER BY date ASC`,
+        thirtyDaysAgo
+      ),
     ]);
 
-    // Revenue chart - last 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const orders = await prisma.order.findMany({
-      where: { paymentStatus: "PAID", createdAt: { gte: thirtyDaysAgo } },
-      select: { total: true, createdAt: true },
-    });
-
+    // Build a complete 30-day chart (fill in missing days with 0)
+    const revenueMap = new Map(
+      (dailyRevenue || []).map((r: any) => [
+        r.date instanceof Date ? r.date.toISOString().split("T")[0] : String(r.date).split("T")[0],
+        Number(r.revenue),
+      ])
+    );
     const revenueChart: { date: string; revenue: number }[] = [];
     for (let i = 0; i < 30; i++) {
       const d = new Date(thirtyDaysAgo);
       d.setDate(d.getDate() + i);
       const dateStr = d.toISOString().split("T")[0];
-      const dayRevenue = orders
-        .filter((o) => o.createdAt.toISOString().split("T")[0] === dateStr)
-        .reduce((sum, o) => sum + Number(o.total), 0);
-      revenueChart.push({ date: dateStr, revenue: dayRevenue });
+      revenueChart.push({ date: dateStr, revenue: revenueMap.get(dateStr) || 0 });
     }
 
     return successResponse(res, {
@@ -417,6 +428,137 @@ export const updateUser = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Update user error:", error);
     return errorResponse(res, "Failed to update user", 500);
+  }
+};
+
+// ─────────────────────── Coupons ───────────────────────
+
+export const getCoupons = async (_req: Request, res: Response) => {
+  try {
+    const coupons = await prisma.coupon.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
+    const enriched = coupons.map((c) => ({
+      ...c,
+      discountValue: Number(c.discountValue),
+      minOrderAmount: c.minOrderAmount ? Number(c.minOrderAmount) : null,
+      maxDiscount: c.maxDiscount ? Number(c.maxDiscount) : null,
+    }));
+
+    return successResponse(res, enriched);
+  } catch (error) {
+    console.error("Get coupons error:", error);
+    return errorResponse(res, "Failed to get coupons", 500);
+  }
+};
+
+export const createCoupon = async (req: Request, res: Response) => {
+  try {
+    const { code, description, discountType, discountValue, minOrderAmount, maxDiscount, usageLimit, expiresAt } = req.body;
+
+    // Check for duplicate code
+    const existing = await prisma.coupon.findUnique({ where: { code: code.toUpperCase() } });
+    if (existing) {
+      return errorResponse(res, "Coupon code already exists", 409);
+    }
+
+    const coupon = await prisma.coupon.create({
+      data: {
+        code: code.toUpperCase(),
+        description,
+        discountType,
+        discountValue,
+        minOrderAmount: minOrderAmount || null,
+        maxDiscount: maxDiscount || null,
+        usageLimit: usageLimit || null,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      },
+    });
+
+    return successResponse(res, {
+      ...coupon,
+      discountValue: Number(coupon.discountValue),
+      minOrderAmount: coupon.minOrderAmount ? Number(coupon.minOrderAmount) : null,
+      maxDiscount: coupon.maxDiscount ? Number(coupon.maxDiscount) : null,
+    }, "Coupon created", 201);
+  } catch (error) {
+    console.error("Create coupon error:", error);
+    return errorResponse(res, "Failed to create coupon", 500);
+  }
+};
+
+export const updateCoupon = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { description, discountType, discountValue, minOrderAmount, maxDiscount, usageLimit, expiresAt, isActive } = req.body;
+
+    const existing = await prisma.coupon.findUnique({ where: { id } });
+    if (!existing) return errorResponse(res, "Coupon not found", 404);
+
+    const data: any = {};
+    if (description !== undefined) data.description = description;
+    if (discountType !== undefined) data.discountType = discountType;
+    if (discountValue !== undefined) data.discountValue = discountValue;
+    if (minOrderAmount !== undefined) data.minOrderAmount = minOrderAmount || null;
+    if (maxDiscount !== undefined) data.maxDiscount = maxDiscount || null;
+    if (usageLimit !== undefined) data.usageLimit = usageLimit || null;
+    if (expiresAt !== undefined) data.expiresAt = expiresAt ? new Date(expiresAt) : null;
+    if (isActive !== undefined) data.isActive = isActive;
+
+    const coupon = await prisma.coupon.update({
+      where: { id },
+      data,
+    });
+
+    return successResponse(res, {
+      ...coupon,
+      discountValue: Number(coupon.discountValue),
+      minOrderAmount: coupon.minOrderAmount ? Number(coupon.minOrderAmount) : null,
+      maxDiscount: coupon.maxDiscount ? Number(coupon.maxDiscount) : null,
+    }, "Coupon updated");
+  } catch (error) {
+    console.error("Update coupon error:", error);
+    return errorResponse(res, "Failed to update coupon", 500);
+  }
+};
+
+export const deleteCoupon = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const existing = await prisma.coupon.findUnique({ where: { id } });
+    if (!existing) return errorResponse(res, "Coupon not found", 404);
+
+    await prisma.coupon.delete({ where: { id } });
+    return successResponse(res, null, "Coupon deleted");
+  } catch (error) {
+    console.error("Delete coupon error:", error);
+    return errorResponse(res, "Failed to delete coupon", 500);
+  }
+};
+
+export const uploadUserAvatar = async (req: Request, res: Response) => {
+  try {
+    if (!req.file) return errorResponse(res, "No file provided", 400);
+
+    const { id } = req.params;
+
+    const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+    if (!user) return errorResponse(res, "User not found", 404);
+
+    const imageUrl = await uploadImage(req.file.buffer, "avatars", id);
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { avatarUrl: imageUrl },
+      select: { id: true, avatarUrl: true },
+    });
+
+    return successResponse(res, updated, "Avatar uploaded");
+  } catch (error) {
+    console.error("Upload user avatar error:", error);
+    return errorResponse(res, "Failed to upload avatar", 500);
   }
 };
 

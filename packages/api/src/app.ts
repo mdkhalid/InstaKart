@@ -1,3 +1,4 @@
+import path from "path";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -15,6 +16,7 @@ import orderRoutes from "./routes/order.routes";
 import paymentRoutes from "./routes/payment.routes";
 import adminRoutes from "./routes/admin.routes";
 import wishlistRoutes from "./routes/wishlist.routes";
+import reviewRoutes from "./routes/review.routes";
 
 const app = express();
 
@@ -37,6 +39,9 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Serve local uploads (avatars, etc.)
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+
 // Logging
 if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
@@ -57,6 +62,7 @@ app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/wishlist", wishlistRoutes);
+app.use("/api/v1/reviews", reviewRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

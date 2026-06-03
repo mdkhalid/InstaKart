@@ -59,6 +59,7 @@ model User {
   orders           Order[]
   cart             Cart?
   wishlist         Wishlist?
+  reviews          Review[]
   refreshTokens    RefreshToken[]
   passwordResets   PasswordReset[]
 
@@ -155,9 +156,14 @@ model Product {
   cartItems     CartItem[]
   orderItems    OrderItem[]
   wishlistItems WishlistItem[]
+  reviews       Review[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([isActive, isFeatured, createdAt])
+  @@index([isActive, isAvailable])
+  @@index([categoryId, isActive])
 }
 
 model Wishlist {
@@ -245,6 +251,10 @@ model Order {
 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+
+  @@index([paymentStatus, createdAt])
+  @@index([userId, status])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -273,6 +283,25 @@ model OrderCounter {
   id        String @id @default(cuid())
   year      Int    @unique
   lastValue Int    @default(0)
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating    Int      // 1-5
+  title     String?
+  comment   String?
+  isVerifiedPurchase Boolean @default(false)
+  helpfulCount Int    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId])
+  @@index([productId, rating])
+  @@index([userId])
 }
 
 model Coupon {

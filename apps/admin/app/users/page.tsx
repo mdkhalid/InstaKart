@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge, getStatusVariant } from "@/components/StatusBadge";
 import { formatDate } from "@/lib/utils";
@@ -51,9 +52,26 @@ export default function UsersPage() {
 
   const columns = [
     {
+      key: "avatarUrl",
+      label: "Photo",
+      render: (v: string, row: any) => (
+        <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
+          {v ? (
+            <Image src={v} alt="" width={32} height={32} className="object-cover w-full h-full" style={{ width: "auto", height: "auto" }} />
+          ) : (
+            <span className="text-xs font-semibold text-primary-700">
+              {row.firstName?.charAt(0)}{row.lastName?.charAt(0)}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
       key: "name",
       label: "Name",
-      render: (_: any, row: any) => `${row.firstName} ${row.lastName}`,
+      render: (_: any, row: any) => (
+        <span className="font-medium text-gray-900">{row.firstName} {row.lastName}</span>
+      ),
     },
     { key: "email", label: "Email" },
     { key: "phone", label: "Phone" },
