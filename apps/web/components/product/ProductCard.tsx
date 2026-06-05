@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ShoppingCart, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, formatQuantity } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
 import { useWishlistStore } from "@/stores/wishlistStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -107,7 +107,7 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
             <span className="text-xs text-gray-500">({product.reviewsCount || 0})</span>
           </div>
-          <p className="text-xs text-gray-500 mb-2">{product.unit}</p>
+          <p className="text-xs text-gray-500 mb-2">{formatQuantity(product)}</p>
           <div className="flex items-center space-x-2 mb-3">
             {hasDiscount ? (
               <>
