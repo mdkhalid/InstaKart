@@ -11,7 +11,7 @@ const ROOT = path.resolve(__dirname, "..");
 const OUT_DIR = path.join(ROOT, "packages", "api", "uploads", "products");
 const MANIFEST = path.join(__dirname, "seed-images-manifest.json");
 
-// Mirror of the 20 seed products in packages/api/prisma/seed.ts.
+// Mirror of the 44 seed products in packages/api/prisma/seed.ts.
 // Each entry: { sku, offCategory, offQuery } - first hit with a real image wins.
 const PRODUCTS = [
   { sku: "SKU-FRUIT-001", name: "Fresh Apple (1 kg)",  offQuery: "apple",   offCategory: "en:apples" },
@@ -83,7 +83,7 @@ async function findOffImage({ offCategory, offQuery }) {
   for (const url of urls) {
     try {
       const j = await fetchJson(url);
-      const items = j.products || j.products || [];
+      const items = j.products || [];
       for (const p of items) {
         const img = p.image_front_url || p.image_front_small_url || p.image_url;
         if (img) return { url: img, name: p.product_name || "" };
