@@ -4,19 +4,16 @@ import { useEffect, useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { ProductGrid } from "@/components/product/ProductGrid";
+import { InfiniteProductGrid } from "@/components/product/InfiniteProductGrid";
 import { ProductCard } from "@/components/product/ProductCard";
-import { ProductCardSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import api from "@/lib/api";
 import { useCartStore } from "@/stores/cartStore";
 
 export default function HomePage() {
-  const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [sort, setSort] = useState("newest");
   const [trendingProducts, setTrendingProducts] = useState([]);
@@ -47,25 +44,6 @@ export default function HomePage() {
       fetchRecentlyViewed();
     }
   }, [isLoggedIn]);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [selectedCategory, sort]);
-
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (selectedCategory) params.set("category", selectedCategory);
-      if (sort) params.set("sort", sort);
-      const { data } = await api.get(`/products?${params}`);
-      setProducts(data.data?.products || []);
-    } catch {
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchTrendingProducts = async () => {
     try {
@@ -123,30 +101,17 @@ export default function HomePage() {
     }
   };
 
-  const handleSearch = async () => {
-    if (!search.trim()) {
-      fetchProducts();
-      return;
-    }
-    setLoading(true);
-    try {
-      const { data } = await api.get(`/products/search?q=${search}`);
-      setProducts(data.data || []);
+  const handleSearch = () => {
+    const q = search.trim();
+    setAppliedSearch(q);
 
-      // Track search activity (fire-and-forget)
-      const token = localStorage.getItem("accessToken");
-      if (token) {
-        api.post("/suggestions/track-search", {
-          query: search,
-          resultsCount: data.data?.length || 0,
-        }).catch(() => {});
-      }
-    } catch {
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
+    if (!q) return;
+    if (typeof window === "undefined") return;
+    if (!localStorage.getItem("accessToken")) return;
+    api.post("/suggestions/track-search", { query: q, resultsCount: 0 }).catch(() => {});
   };
+
+  const listingPageSize = selectedCategory ? 100 : 20;
 
   return (
     <>
@@ -227,7 +192,7 @@ export default function HomePage() {
         )}
 
         {/* Trending Products Section */}
-        {!loading && trendingProducts.length > 0 && (
+        {trendingProducts.length > 0 && (
           <section className="py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="mb-6">
@@ -253,7 +218,7 @@ export default function HomePage() {
         )}
 
         {/* Popular Categories Section */}
-        {!loading && popularCategories.length > 0 && (
+        {popularCategories.length > 0 && (
           <section className="py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="mb-6">
@@ -337,19 +302,12 @@ export default function HomePage() {
 
             {/* Product Grid */}
             <div className="flex-1">
-              {loading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <ProductCardSkeleton key={i} />
-                  ))}
-                </div>
-              ) : products.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <p className="text-lg">No products found</p>
-                </div>
-              ) : (
-                <ProductGrid products={products} />
-              )}
+              <InfiniteProductGrid
+                category={selectedCategory}
+                sort={sort}
+                search={appliedSearch}
+                pageSize={listingPageSize}
+              />
             </div>
           </div>
         </div>
