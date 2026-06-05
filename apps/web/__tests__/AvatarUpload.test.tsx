@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
+import "@testing-library/jest-dom/jest-globals";
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 
