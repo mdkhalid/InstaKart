@@ -181,7 +181,9 @@ export default function HomePage() {
           <section className="py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="mb-6">
-                <h2 className="text-2xl font-semibold">👁️ Recently Viewed</h2>
+                <h2 className="text-2xl font-semibold">
+                  <span aria-hidden>👁️</span> Recently Viewed
+                </h2>
                 <p className="text-sm text-gray-500 mt-1">Pick up where you left off</p>
               </div>
               <div className="overflow-x-auto">
@@ -204,7 +206,9 @@ export default function HomePage() {
           <section className="py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="mb-6">
-                <h2 className="text-2xl font-semibold">✨ Suggested for You</h2>
+                <h2 className="text-2xl font-semibold">
+                  <span aria-hidden>✨</span> Suggested for You
+                </h2>
                 <p className="text-sm text-gray-500 mt-1">Based on your searches and activity</p>
               </div>
               <div className="overflow-x-auto">
@@ -227,7 +231,9 @@ export default function HomePage() {
           <section className="py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="mb-6">
-                <h2 className="text-2xl font-semibold">🔥 Trending Now</h2>
+                <h2 className="text-2xl font-semibold">
+                  <span aria-hidden>🔥</span> Trending Now
+                </h2>
                 <p className="text-sm text-gray-500 mt-1">What's hot right now</p>
               </div>
               <div className="overflow-x-auto">
@@ -251,7 +257,9 @@ export default function HomePage() {
           <section className="py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="mb-6">
-                <h2 className="text-2xl font-semibold">🛒 Shop by Category</h2>
+                <h2 className="text-2xl font-semibold">
+                  <span aria-hidden>🛒</span> Shop by Category
+                </h2>
                 <p className="text-sm text-gray-500 mt-1">Explore our most popular sections</p>
               </div>
               <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">

@@ -7,7 +7,7 @@ import { Trash2, ShoppingBag } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
 import { useAuthStore } from "@/stores/authStore";
 import toast from "react-hot-toast";
@@ -74,12 +74,12 @@ export default function CartPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Delivery</span>
-                  <span>{total >= 499 ? "Free" : "₹40"}</span>
+                  <span>{total >= FREE_DELIVERY_THRESHOLD ? "Free" : formatPrice(DELIVERY_FEE)}</span>
                 </div>
                 <div className="border-t pt-2 mt-2">
                   <div className="flex justify-between font-semibold text-base">
                     <span>Total</span>
-                    <span>{formatPrice(total + (total >= 499 ? 0 : 40))}</span>
+                    <span>{formatPrice(total + (total >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE))}</span>
                   </div>
                 </div>
               </div>

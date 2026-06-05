@@ -4,12 +4,10 @@ import { X, ShoppingCart, Percent, XCircle, Check } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, FREE_DELIVERY_THRESHOLD } from "@/lib/utils";
 import Link from "next/link";
 import { useState } from "react";
 import toast from "react-hot-toast";
-
-const FREE_DELIVERY_THRESHOLD = 499;
 
 export function CartDrawer() {
   const { items, isOpen, toggleCart, total, subtotal, coupon, couponLoading, itemCount, applyCoupon, removeCoupon } = useCart();
@@ -70,7 +68,7 @@ export function CartDrawer() {
                   <>
                     <div className="flex justify-between text-xs text-amber-800 mb-1.5">
                       <span className="font-medium">Free delivery</span>
-                      <span className="font-medium">₹{remainingForFree.toFixed(0)} away</span>
+                      <span className="font-medium">{formatPrice(remainingForFree)} away</span>
                     </div>
                     <div className="h-2 bg-amber-200 rounded-full overflow-hidden">
                       <div
@@ -79,7 +77,7 @@ export function CartDrawer() {
                       />
                     </div>
                     <p className="text-xs text-amber-700 mt-1.5">
-                      Add <strong>₹{remainingForFree.toFixed(0)}</strong> more for free delivery!
+                      Add <strong>{formatPrice(remainingForFree)}</strong> more for free delivery!
                     </p>
                   </>
                 ) : (

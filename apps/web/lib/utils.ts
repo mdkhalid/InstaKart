@@ -5,6 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Mirror of packages/api env defaults. The API owns the source of truth
+// (FREE_DELIVERY_THRESHOLD / DELIVERY_FEE env vars); these are the
+// fallbacks the web app uses until the cart endpoint returns the real
+// values. Keep in sync with order.controller.ts.
+export const FREE_DELIVERY_THRESHOLD = 499;
+export const DELIVERY_FEE = 40;
+
 export function formatPrice(price: number): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
