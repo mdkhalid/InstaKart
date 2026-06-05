@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import api from "@/lib/api";
-import { User } from "@/types";
+import { User } from "@instamart/types";
 
 interface AuthState {
   user: User | null;

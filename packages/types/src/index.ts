@@ -55,6 +55,10 @@ export const PRODUCT_UNITS: readonly ProductUnit[] = [
 ] as const;
 
 // User Types
+// `role` is typed as a loose string because the API serializes the
+// Prisma enum to a string at the JSON boundary. Consumers can narrow
+// with `Role` if they need type-safety on the literal values.
+// Dates are ISO strings (JSON), not Date objects.
 export interface User {
   id: string;
   email: string;
@@ -62,11 +66,12 @@ export interface User {
   firstName: string;
   lastName: string;
   avatarUrl?: string;
-  role: Role;
+  role: string;
   isEmailVerified: boolean;
   isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  defaultAddressId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Address {
