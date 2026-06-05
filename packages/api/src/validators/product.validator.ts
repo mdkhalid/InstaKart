@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ProductUnit } from "@instamart/types";
 
 export const createProductSchema = z.object({
   name: z.string().min(2).max(200),
@@ -11,7 +12,7 @@ export const createProductSchema = z.object({
   costPrice: z.number().positive().optional().nullable(),
   stock: z.number().int().min(0).default(0),
   lowStockAlert: z.number().int().min(0).default(10),
-  unit: z.string().default("pcs"),
+  unit: z.nativeEnum(ProductUnit).default(ProductUnit.PCS),
   categoryId: z.string(),
   tags: z.array(z.string()).default([]),
   attributes: z.record(z.any()).optional(),

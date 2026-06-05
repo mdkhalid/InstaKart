@@ -13,6 +13,7 @@
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
+    "@instamart/types": "*",
     "@prisma/client": "^5.22.0",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.5.1",

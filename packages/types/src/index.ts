@@ -29,6 +29,31 @@ export enum PaymentMethod {
   UPI = 'UPI',
 }
 
+// Product Units
+// Canonical unit list for the catalogue. The product name should always
+// include the actual quantity (e.g. "Fresh Milk (1 L)") so the UI can render
+// "<name> / <unit>" without duplication. Do NOT add quantity-bearing values
+// like "2 L" or "500 g" here — the unit field is the base unit only.
+export enum ProductUnit {
+  PCS = 'pcs',
+  PACK = 'pack',
+  KG = 'kg',
+  G = 'g',
+  L = 'L',
+  ML = 'ml',
+  DOZEN = 'dozen',
+}
+
+export const PRODUCT_UNITS: readonly ProductUnit[] = [
+  ProductUnit.PCS,
+  ProductUnit.PACK,
+  ProductUnit.KG,
+  ProductUnit.G,
+  ProductUnit.L,
+  ProductUnit.ML,
+  ProductUnit.DOZEN,
+] as const;
+
 // User Types
 export interface User {
   id: string;

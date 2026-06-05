@@ -367,25 +367,27 @@ export default function HomePage() {
                 <h2 className="text-2xl font-semibold">🛒 Shop by Category</h2>
                 <p className="text-sm text-gray-500 mt-1">Explore our most popular sections</p>
               </div>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
                 {popularCategories.map((category: any) => (
-                  <div 
-                    key={category.id} 
+                  <button
+                    key={category.id}
                     onClick={() => setSelectedCategory(category.slug)}
-                    className="group relative cursor-pointer hover:shadow-lg transition-shadow"
+                    className="group flex flex-col items-center text-center focus:outline-none"
                   >
-                    <div className="aspect-w-16 aspect-h-9 overflow-hidden rounded-xl bg-gray-50">
-                      <img 
-                        src={category.imageUrl || '/placeholder.svg'} 
-                        alt={category.name} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    <div className="relative w-full aspect-square overflow-hidden rounded-2xl bg-gray-50 ring-1 ring-gray-200 group-hover:ring-primary-500 group-hover:shadow-lg transition-all duration-300">
+                      <img
+                        src={category.imageUrl || '/placeholder.svg'}
+                        alt={category.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
-                      <div className="absolute inset-0 bg-black bg-opacity-30 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <h3 className="text-lg font-semibold">{category.name}</h3>
-                        <p className="text-sm mt-1">{category.productsCount || 0}+ products</p>
-                      </div>
                     </div>
-                  </div>
+                    <h3 className="mt-2 text-xs sm:text-sm font-medium text-gray-700 line-clamp-1 group-hover:text-primary-600 transition-colors">
+                      {category.name}
+                    </h3>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
+                      {category.productsCount || 0} items
+                    </p>
+                  </button>
                 ))}
               </div>
             </div>

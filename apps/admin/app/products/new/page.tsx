@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { CategorySelect } from "@/components/CategorySelect";
 import { ImageUploader, type ProductImage } from "@/components/ImageUploader";
+import { PRODUCT_UNITS } from "@instamart/types";
 
 type ProductForm = {
   name: string;
@@ -130,21 +131,9 @@ export default function NewProductPage() {
               onChange={(e) => setForm({ ...form, unit: e.target.value })}
               className="w-full border rounded-lg px-3 py-2 text-sm bg-white"
             >
-              <option value="pcs">pcs</option>
-              <option value="kg">kg</option>
-              <option value="g">g</option>
-              <option value="L">L</option>
-              <option value="ml">ml</option>
-              <option value="dozen">dozen</option>
-              <option value="pack">pack</option>
-              <option value="500 g">500 g</option>
-              <option value="250 g">250 g</option>
-              <option value="200 ml">200 ml</option>
-              <option value="100 ml">100 ml</option>
-              <option value="100 g">100 g</option>
-              <option value="400 g">400 g</option>
-              <option value="2 L">2 L</option>
-              <option value="500 ml">500 ml</option>
+              {PRODUCT_UNITS.map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
             </select>
           </div>
         </div>

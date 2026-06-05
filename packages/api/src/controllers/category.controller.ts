@@ -32,13 +32,21 @@ export const getPopularCategories = async (_req: Request, res: Response) => {
         include: { _count: { select: { products: true } } },
       });
 
-      return popularCategories.length > 0
+      const list = popularCategories.length > 0
         ? popularCategories
         : await prisma.category.findMany({
             where: { isActive: true },
             take: 8,
             orderBy: { sortOrder: "asc" },
+            include: { _count: { select: { products: true } } },
           });
+
+      // Flatten _count.products to productsCount so the response shape is
+      // consistent for the frontend regardless of which branch was used.
+      return list.map((c: any) => ({
+        ...c,
+        productsCount: c._count?.products ?? 0,
+      }));
     }, 120_000); // Cache for 2 minutes
 
     return successResponse(res, categoriesToReturn);
