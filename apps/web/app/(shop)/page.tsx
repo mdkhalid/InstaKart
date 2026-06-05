@@ -216,6 +216,14 @@ export default function HomePage() {
                             )}
                           </div>
                         </Link>
+                        <div className="mt-1.5 flex items-center">
+                          <div className="flex items-center space-x-0.5 text-yellow-400 text-[10px]">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <span key={star}>{star <= (product.rating || 0) ? '★' : '☆'}</span>
+                            ))}
+                          </div>
+                          <span className="ml-1.5 text-gray-500 text-[10px]">({product.reviewsCount || 0})</span>
+                        </div>
                         <Button
                           onClick={() => {
                             if (!product.isAvailable || product.stock <= 0) {
@@ -277,6 +285,14 @@ export default function HomePage() {
                             )}
                           </div>
                         </Link>
+                        <div className="mt-2 flex items-center">
+                          <div className="flex items-center space-x-1 text-yellow-400 text-xs">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <span key={star}>{star <= (product.rating || 0) ? '★' : '☆'}</span>
+                            ))}
+                          </div>
+                          <span className="ml-2 text-gray-500 text-xs">({product.reviewsCount || 0})</span>
+                        </div>
                         <Button
                           onClick={() => {
                             if (!product.isAvailable || product.stock <= 0) {

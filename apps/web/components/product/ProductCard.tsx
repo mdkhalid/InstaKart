@@ -26,7 +26,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const imageUrl = product.images?.[0]?.url || "/placeholder.svg";
   const hasDiscount = product.salePrice && product.salePrice < product.price;
-  const hasRating = product.averageRating && product.averageRating > 0;
+  const hasRating = product.rating && product.rating > 0;
 
   useEffect(() => {
     if (user) {
@@ -102,9 +102,9 @@ export function ProductCard({ product }: ProductCardProps) {
           {hasRating && (
             <div className="flex items-center space-x-1 mb-1">
               <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-              <span className="text-xs font-medium text-gray-700">{product.averageRating}</span>
-              {product._count?.reviews > 0 && (
-                <span className="text-xs text-gray-400">({product._count.reviews})</span>
+              <span className="text-xs font-medium text-gray-700">{product.rating}</span>
+              {product.reviewsCount > 0 && (
+                <span className="text-xs text-gray-400">({product.reviewsCount})</span>
               )}
             </div>
           )}
