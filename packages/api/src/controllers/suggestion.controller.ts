@@ -169,7 +169,8 @@ export const getSuggestions = async (req: Request, res: Response) => {
         discountPercent: p.salePrice
           ? Math.round(((Number(p.price) - Number(p.salePrice)) / Number(p.price)) * 100)
           : 0,
-        averageRating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+        rating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+        reviewsCount: p._count?.reviews ?? 0,
       }));
     }, 300_000); // Cache for 5 minutes
 
@@ -244,7 +245,8 @@ export const getRecentlyViewed = async (req: Request, res: Response) => {
         discountPercent: p.salePrice
           ? Math.round(((Number(p.price) - Number(p.salePrice)) / Number(p.price)) * 100)
           : 0,
-        averageRating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+        rating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+        reviewsCount: p._count?.reviews ?? 0,
       }));
     }, 300_000); // Cache for 5 minutes
 

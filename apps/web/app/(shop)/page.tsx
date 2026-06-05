@@ -323,9 +323,9 @@ export default function HomePage() {
                         </div>
                         <h3 className="font-semibold text-gray-900 line-clamp-2">{product.name}</h3>
                         <p className="mt-2">
-                          <span className="font-medium text-red-600">₹{product.price.toFixed(2)}</span>
-                          {product.originalPrice && (
-                            <span className="ml-2 text-gray-400 line-through">₹{product.originalPrice.toFixed(2)}</span>
+                          <span className="font-medium text-primary-600">₹{product.salePrice?.toFixed(2) || product.price.toFixed(2)}</span>
+                          {product.discountPercent > 0 && (
+                            <span className="ml-2 text-gray-400 line-through">₹{product.price.toFixed(2)}</span>
                           )}
                         </p>
                         <div className="mt-3 flex items-center">

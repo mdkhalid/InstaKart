@@ -97,7 +97,8 @@ export const listProducts = async (req: Request, res: Response) => {
           price: Number(p.price),
           salePrice: p.salePrice ? Number(p.salePrice) : null,
           discountPercent: p.salePrice ? Math.round(((Number(p.price) - Number(p.salePrice)) / Number(p.price)) * 100) : 0,
-          averageRating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+          rating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+          reviewsCount: p._count?.reviews ?? 0,
         })),
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
       };
@@ -163,7 +164,9 @@ export const getTrendingProducts = async (req: Request, res: Response) => {
         ...p,
         price: Number(p.price),
         salePrice: p.salePrice ? Number(p.salePrice) : null,
-        averageRating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+        discountPercent: p.salePrice ? Math.round(((Number(p.price) - Number(p.salePrice)) / Number(p.price)) * 100) : 0,
+        rating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+        reviewsCount: p._count?.reviews ?? 0,
       }));
     }, 60_000); // Cache for 60 seconds (trending changes slowly)
 
@@ -183,6 +186,7 @@ export const getFeatured = async (req: Request, res: Response) => {
         include: {
           category: { select: { id: true, name: true, slug: true } },
           images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
+          _count: { select: { reviews: true } },
         },
       });
 
@@ -198,7 +202,9 @@ export const getFeatured = async (req: Request, res: Response) => {
         ...p,
         price: Number(p.price),
         salePrice: p.salePrice ? Number(p.salePrice) : null,
-        averageRating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+        discountPercent: p.salePrice ? Math.round(((Number(p.price) - Number(p.salePrice)) / Number(p.price)) * 100) : 0,
+        rating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+        reviewsCount: p._count?.reviews ?? 0,
       }));
     }, 60_000); // Cache for 60 seconds
 
