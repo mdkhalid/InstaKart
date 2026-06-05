@@ -5,14 +5,12 @@ import { Search, SlidersHorizontal } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ProductGrid } from "@/components/product/ProductGrid";
+import { ProductCard } from "@/components/product/ProductCard";
 import { ProductCardSkeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import api from "@/lib/api";
-import { useCart } from "@/hooks/useCart";
 import { useCartStore } from "@/stores/cartStore";
-import Link from "next/link";
-import toast from "react-hot-toast";
 
 export default function HomePage() {
   const [products, setProducts] = useState([]);
@@ -28,7 +26,6 @@ export default function HomePage() {
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
   const [recentlyViewedLoaded, setRecentlyViewedLoaded] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const { addItem } = useCart();
   const syncWithServer = useCartStore((state) => state.syncWithServer);
 
   useEffect(() => {
@@ -190,57 +187,11 @@ export default function HomePage() {
               <div className="overflow-x-auto">
                 <div className="inline-flex space-x-4">
                   {recentlyViewed.map((product: any) => (
-                    <div key={product.id} className="flex-shrink-0 w-56">
-                      <div className="bg-white rounded-xl border p-3 hover:shadow-lg transition-shadow">
-                        <Link href={`/products/${product.slug}`}>
-                          <div className="relative h-36 mb-3">
-                            <img
-                              src={product.images?.[0]?.url || "/placeholder.svg"}
-                              alt={product.name}
-                              className="w-full h-full object-cover rounded-lg"
-                            />
-                            {product.discountPercent > 0 && (
-                              <span className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded">
-                                {product.discountPercent}% OFF
-                              </span>
-                            )}
-                          </div>
-                          <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">{product.name}</h3>
-                          <p className="text-xs text-gray-500 mt-0.5">{product.category?.name}</p>
-                          <div className="mt-1.5 flex items-center space-x-1">
-                            <span className="font-medium text-primary-600 text-sm">
-                              ₹{product.salePrice?.toFixed(2) || product.price.toFixed(2)}
-                            </span>
-                            {product.discountPercent > 0 && (
-                              <span className="text-xs text-gray-400 line-through">₹{product.price.toFixed(2)}</span>
-                            )}
-                          </div>
-                        </Link>
-                        <div className="mt-1.5 flex items-center">
-                          <div className="flex items-center space-x-0.5 text-yellow-400 text-[10px]">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <span key={star}>{star <= (product.rating || 0) ? '★' : '☆'}</span>
-                            ))}
-                          </div>
-                          <span className="ml-1.5 text-gray-500 text-[10px]">({product.reviewsCount || 0})</span>
-                        </div>
-                        <Button
-                          onClick={() => {
-                            if (!product.isAvailable || product.stock <= 0) {
-                              toast.error(`${product.name} is out of stock`);
-                              return;
-                            }
-                            addItem(product);
-                            toast.success(`${product.name} added to cart`);
-                          }}
-                          className="w-full mt-2 bg-primary-600 text-white hover:bg-primary-700 text-xs py-1.5"
-                          disabled={!product.isAvailable || product.stock <= 0}
-                          size="sm"
-                        >
-                          Add to Cart
-                        </Button>
-                      </div>
-                    </div>
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      variant="inline-compact"
+                    />
                   ))}
                 </div>
               </div>
@@ -259,56 +210,11 @@ export default function HomePage() {
               <div className="overflow-x-auto">
                 <div className="inline-flex space-x-4">
                   {suggestedProducts.map((product: any) => (
-                    <div key={product.id} className="flex-shrink-0 w-64">
-                      <div className="bg-white rounded-xl border p-4 hover:shadow-lg transition-shadow">
-                        <Link href={`/products/${product.slug}`}>
-                          <div className="relative">
-                            {product.discountPercent > 0 && (
-                              <span className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                                {product.discountPercent}% OFF
-                              </span>
-                            )}
-                            <img
-                              src={product.images?.[0]?.url || "/placeholder.svg"}
-                              alt={product.name}
-                              className="w-full h-48 object-cover rounded-lg mb-3"
-                            />
-                          </div>
-                          <h3 className="font-semibold text-gray-900 line-clamp-2">{product.name}</h3>
-                          <p className="mt-1 text-sm text-gray-500">{product.category?.name}</p>
-                          <div className="mt-2 flex items-center space-x-1">
-                            <span className="font-medium text-primary-600">
-                              ₹{product.salePrice?.toFixed(2) || product.price.toFixed(2)}
-                            </span>
-                            {product.discountPercent > 0 && (
-                              <span className="text-sm text-gray-400 line-through">₹{product.price.toFixed(2)}</span>
-                            )}
-                          </div>
-                        </Link>
-                        <div className="mt-2 flex items-center">
-                          <div className="flex items-center space-x-1 text-yellow-400 text-xs">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <span key={star}>{star <= (product.rating || 0) ? '★' : '☆'}</span>
-                            ))}
-                          </div>
-                          <span className="ml-2 text-gray-500 text-xs">({product.reviewsCount || 0})</span>
-                        </div>
-                        <Button
-                          onClick={() => {
-                            if (!product.isAvailable || product.stock <= 0) {
-                              toast.error(`${product.name} is out of stock`);
-                              return;
-                            }
-                            addItem(product);
-                            toast.success(`${product.name} added to cart`);
-                          }}
-                          className="w-full mt-2 bg-primary-600 text-white hover:bg-primary-700 text-sm"
-                          disabled={!product.isAvailable || product.stock <= 0}
-                        >
-                          Add to Cart
-                        </Button>
-                      </div>
-                    </div>
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      variant="inline"
+                    />
                   ))}
                 </div>
               </div>
@@ -327,47 +233,12 @@ export default function HomePage() {
               <div className="overflow-x-auto">
                 <div className="inline-flex space-x-4">
                   {trendingProducts.map((product: any) => (
-                    <div key={product.id} className="flex-shrink-0 w-64">
-                      <div className="bg-white rounded-xl border p-4 hover:shadow-lg transition-shadow">
-                        <div className="relative">
-                          <span className="absolute top-2 right-2 bg-primary-500 text-white text-xs px-2 py-1 rounded">Trending</span>
-                          <img 
-                            src={product.images?.[0]?.url || '/placeholder.svg'} 
-                            alt={product.name} 
-                            className="w-full h-48 object-cover rounded-lg mb-3"
-                          />
-                        </div>
-                        <h3 className="font-semibold text-gray-900 line-clamp-2">{product.name}</h3>
-                        <p className="mt-2">
-                          <span className="font-medium text-primary-600">₹{product.salePrice?.toFixed(2) || product.price.toFixed(2)}</span>
-                          {product.discountPercent > 0 && (
-                            <span className="ml-2 text-gray-400 line-through">₹{product.price.toFixed(2)}</span>
-                          )}
-                        </p>
-                        <div className="mt-3 flex items-center">
-                          <div className="flex items-center space-x-1 text-yellow-400 text-xs">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <span key={star}>{star <= (product.rating || 0) ? '★' : '☆'}</span>
-                            ))}
-                          </div>
-                          <span className="ml-2 text-gray-500 text-xs">({product.reviewsCount || 0})</span>
-                        </div>
-                        <Button 
-                          onClick={() => {
-                            if (!product.isAvailable || product.stock <= 0) {
-                              toast.error(`${product.name} is out of stock`);
-                              return;
-                            }
-                            addItem(product);
-                            toast.success(`${product.name} added to cart`);
-                          }}
-                          className="w-full mt-2 bg-primary-600 text-white hover:bg-primary-700"
-                          disabled={!product.isAvailable || product.stock <= 0}
-                        >
-                          Add to Cart
-                        </Button>
-                      </div>
-                    </div>
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      variant="inline"
+                      trendingBadge
+                    />
                   ))}
                 </div>
               </div>
