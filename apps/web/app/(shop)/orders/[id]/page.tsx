@@ -8,9 +8,11 @@ import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge, statusBadgeVariant } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { OrderTracker } from "@/components/order/OrderTracker";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useConfirm } from "@/hooks/useConfirm";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -22,6 +24,7 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const { confirm, dialogProps } = useConfirm();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -44,7 +47,13 @@ export default function OrderDetailPage() {
   };
 
   const handleCancel = async () => {
-    if (!confirm("Are you sure you want to cancel this order?")) return;
+    const ok = await confirm({
+      title: "Cancel order?",
+      message: "This will cancel your order. You can place a new one anytime.",
+      confirmText: "Cancel order",
+      variant: "danger",
+    });
+    if (!ok) return;
     setCancelling(true);
     try {
       await api.post(`/orders/${params.id}/cancel`, { reason: "Cancelled by customer" });
@@ -162,6 +171,7 @@ export default function OrderDetailPage() {
           </Button>
         )}
       </main>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
       <Footer />
     </>
   );

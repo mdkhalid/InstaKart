@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { Star, ThumbsUp, ChevronDown, ChevronUp, User } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuthStore } from "@/stores/authStore";
+import { useConfirm } from "@/hooks/useConfirm";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import Image from "next/image";
@@ -41,6 +43,7 @@ export function ReviewSection({ productSlug, productId }: ReviewSectionProps) {
   const [formTitle, setFormTitle] = useState("");
   const [formComment, setFormComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const { confirm, dialogProps } = useConfirm();
 
   useEffect(() => {
     fetchReviews();
@@ -91,7 +94,13 @@ export function ReviewSection({ productSlug, productId }: ReviewSectionProps) {
   };
 
   const handleDelete = async (reviewId: string) => {
-    if (!confirm("Delete this review?")) return;
+    const ok = await confirm({
+      title: "Delete review?",
+      message: "This action cannot be undone.",
+      confirmText: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await api.delete(`/reviews/${reviewId}`);
       setReviews((prev) => prev.filter((r) => r.id !== reviewId));
@@ -273,6 +282,7 @@ export function ReviewSection({ productSlug, productId }: ReviewSectionProps) {
           })}
         </div>
       )}
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </div>
   );
 }
