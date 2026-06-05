@@ -49,4 +49,7 @@ nul
 # Uploads (avatars, product images)
 uploads/
 
+# Internal review notes (not for public distribution)
+REVIEW.md
+
 # Prisma
