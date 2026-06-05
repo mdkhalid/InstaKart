@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/stores/cartStore";
+import { useWishlistStore } from "@/stores/wishlistStore";
 import { useAuthStore } from "@/stores/authStore";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -16,6 +17,7 @@ import toast from "react-hot-toast";
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, total, subtotal, coupon, itemCount, clearCart, validateStock, applyCoupon, removeCoupon, syncToServer } = useCartStore();
+  const fetchWishlist = useWishlistStore((s) => s.fetchWishlist);
   const [couponCode, setCouponCode] = useState("");
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const user = useAuthStore((state) => state.user);
@@ -97,6 +99,8 @@ export default function CheckoutPage() {
       setOrderStep('completed');
       toast.success("Order placed successfully!");
       clearCart();
+      // Refresh wishlist so the UI stops showing items the user just bought
+      fetchWishlist().catch(() => {});
       // Brief pause to show the completed state before redirect
       setTimeout(() => router.push(`/orders/${data.data.id}`), 600);
     } catch (error: any) {

@@ -1,0 +1,401 @@
+{
+  "generatedAt": "2026-06-05T14:04:48.962Z",
+  "images": [
+    {
+      "sku": "SKU-FRUIT-001",
+      "productName": "Compote Pomme Nature",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/360/858/078/9758/front_fr.80.400.jpg",
+      "file": "packages/api/uploads/products/SKU-FRUIT-001.jpg",
+      "url": "/uploads/products/SKU-FRUIT-001.jpg",
+      "bytes": 28303
+    },
+    {
+      "sku": "SKU-FRUIT-002",
+      "productName": "Banana (1 dozen)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-FRUIT-002/600/600",
+      "file": "packages/api/uploads/products/SKU-FRUIT-002.jpg",
+      "url": "/uploads/products/SKU-FRUIT-002.jpg",
+      "bytes": 50053
+    },
+    {
+      "sku": "SKU-FRUIT-003",
+      "productName": "Organic Tomatoes",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-FRUIT-003/600/600",
+      "file": "packages/api/uploads/products/SKU-FRUIT-003.jpg",
+      "url": "/uploads/products/SKU-FRUIT-003.jpg",
+      "bytes": 28099
+    },
+    {
+      "sku": "SKU-FRUIT-004",
+      "productName": "Grenade en grains",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/335/003/019/7216/front_fr.8.400.jpg",
+      "file": "packages/api/uploads/products/SKU-FRUIT-004.jpg",
+      "url": "/uploads/products/SKU-FRUIT-004.jpg",
+      "bytes": 27990
+    },
+    {
+      "sku": "SKU-FRUIT-005",
+      "productName": "Spinach (500 g)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-FRUIT-005/600/600",
+      "file": "packages/api/uploads/products/SKU-FRUIT-005.jpg",
+      "url": "/uploads/products/SKU-FRUIT-005.jpg",
+      "bytes": 66606
+    },
+    {
+      "sku": "SKU-FRUIT-006",
+      "productName": "Onion (1 kg)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-FRUIT-006/600/600",
+      "file": "packages/api/uploads/products/SKU-FRUIT-006.jpg",
+      "url": "/uploads/products/SKU-FRUIT-006.jpg",
+      "bytes": 48964
+    },
+    {
+      "sku": "SKU-FRUIT-007",
+      "productName": "Carrot (500 g)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-FRUIT-007/600/600",
+      "file": "packages/api/uploads/products/SKU-FRUIT-007.jpg",
+      "url": "/uploads/products/SKU-FRUIT-007.jpg",
+      "bytes": 61051
+    },
+    {
+      "sku": "SKU-DAIRY-001",
+      "productName": "f",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/611/126/696/2187/front_fr.56.400.jpg",
+      "file": "packages/api/uploads/products/SKU-DAIRY-001.jpg",
+      "url": "/uploads/products/SKU-DAIRY-001.jpg",
+      "bytes": 26044
+    },
+    {
+      "sku": "SKU-DAIRY-002",
+      "productName": "Eggs (12 pcs)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-DAIRY-002/600/600",
+      "file": "packages/api/uploads/products/SKU-DAIRY-002.jpg",
+      "url": "/uploads/products/SKU-DAIRY-002.jpg",
+      "bytes": 24217
+    },
+    {
+      "sku": "SKU-DAIRY-003",
+      "productName": "Butter (500 g)",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/611/109/900/3897/front_en.42.400.jpg",
+      "file": "packages/api/uploads/products/SKU-DAIRY-003.jpg",
+      "url": "/uploads/products/SKU-DAIRY-003.jpg",
+      "bytes": 15857
+    },
+    {
+      "sku": "SKU-DAIRY-004",
+      "productName": "Yogurt Greek Style",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/000/002/004/7559/front_en.229.400.jpg",
+      "file": "packages/api/uploads/products/SKU-DAIRY-004.jpg",
+      "url": "/uploads/products/SKU-DAIRY-004.jpg",
+      "bytes": 19289
+    },
+    {
+      "sku": "SKU-DAIRY-005",
+      "productName": "Cheddar",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/611/120/300/6653/front_ar.14.400.jpg",
+      "file": "packages/api/uploads/products/SKU-DAIRY-005.jpg",
+      "url": "/uploads/products/SKU-DAIRY-005.jpg",
+      "bytes": 21032
+    },
+    {
+      "sku": "SKU-DAIRY-006",
+      "productName": "Paneer (200 g)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-DAIRY-006/600/600",
+      "file": "packages/api/uploads/products/SKU-DAIRY-006.jpg",
+      "url": "/uploads/products/SKU-DAIRY-006.jpg",
+      "bytes": 52658
+    },
+    {
+      "sku": "SKU-BEV-001",
+      "productName": "Cocacola original  500",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/544/900/005/4227/front_en.533.400.jpg",
+      "file": "packages/api/uploads/products/SKU-BEV-001.jpg",
+      "url": "/uploads/products/SKU-BEV-001.jpg",
+      "bytes": 33205
+    },
+    {
+      "sku": "SKU-BEV-002",
+      "productName": "Orange Juice (1 L)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-BEV-002/600/600",
+      "file": "packages/api/uploads/products/SKU-BEV-002.jpg",
+      "url": "/uploads/products/SKU-BEV-002.jpg",
+      "bytes": 76164
+    },
+    {
+      "sku": "SKU-BEV-003",
+      "productName": "Green Tea",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/692/381/881/2082/front_en.5.400.jpg",
+      "file": "packages/api/uploads/products/SKU-BEV-003.jpg",
+      "url": "/uploads/products/SKU-BEV-003.jpg",
+      "bytes": 18645
+    },
+    {
+      "sku": "SKU-BEV-004",
+      "productName": "Mineral Water (1 L)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-BEV-004/600/600",
+      "file": "packages/api/uploads/products/SKU-BEV-004.jpg",
+      "url": "/uploads/products/SKU-BEV-004.jpg",
+      "bytes": 28177
+    },
+    {
+      "sku": "SKU-BEV-005",
+      "productName": "Ground Coffee (200 g)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-BEV-005/600/600",
+      "file": "packages/api/uploads/products/SKU-BEV-005.jpg",
+      "url": "/uploads/products/SKU-BEV-005.jpg",
+      "bytes": 62701
+    },
+    {
+      "sku": "SKU-BEV-006",
+      "productName": "Mango Lassi (200 ml)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-BEV-006/600/600",
+      "file": "packages/api/uploads/products/SKU-BEV-006.jpg",
+      "url": "/uploads/products/SKU-BEV-006.jpg",
+      "bytes": 56880
+    },
+    {
+      "sku": "SKU-SNACK-001",
+      "productName": "Potato Chips (100 g)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-SNACK-001/600/600",
+      "file": "packages/api/uploads/products/SKU-SNACK-001.jpg",
+      "url": "/uploads/products/SKU-SNACK-001.jpg",
+      "bytes": 54822
+    },
+    {
+      "sku": "SKU-SNACK-002",
+      "productName": "Mixed Nuts (200 g)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-SNACK-002/600/600",
+      "file": "packages/api/uploads/products/SKU-SNACK-002.jpg",
+      "url": "/uploads/products/SKU-SNACK-002.jpg",
+      "bytes": 37938
+    },
+    {
+      "sku": "SKU-SNACK-003",
+      "productName": "Extra fine dark chocolate",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/304/692/002/9759/front_en.544.400.jpg",
+      "file": "packages/api/uploads/products/SKU-SNACK-003.jpg",
+      "url": "/uploads/products/SKU-SNACK-003.jpg",
+      "bytes": 17154
+    },
+    {
+      "sku": "SKU-SNACK-004",
+      "productName": "Prince Goût Chocolat au blé complet",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/762/221/044/9283/front_en.605.400.jpg",
+      "file": "packages/api/uploads/products/SKU-SNACK-004.jpg",
+      "url": "/uploads/products/SKU-SNACK-004.jpg",
+      "bytes": 29961
+    },
+    {
+      "sku": "SKU-SNACK-005",
+      "productName": "Popcorn (100 g)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-SNACK-005/600/600",
+      "file": "packages/api/uploads/products/SKU-SNACK-005.jpg",
+      "url": "/uploads/products/SKU-SNACK-005.jpg",
+      "bytes": 74209
+    },
+    {
+      "sku": "SKU-SNACK-006",
+      "productName": "tortilla chips avocado chili",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/506/036/745/0745/front_en.8.400.jpg",
+      "file": "packages/api/uploads/products/SKU-SNACK-006.jpg",
+      "url": "/uploads/products/SKU-SNACK-006.jpg",
+      "bytes": 24759
+    },
+    {
+      "sku": "SKU-BAKE-001",
+      "productName": "Pain De Mie Bio",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/376/004/979/0214/front_en.262.400.jpg",
+      "file": "packages/api/uploads/products/SKU-BAKE-001.jpg",
+      "url": "/uploads/products/SKU-BAKE-001.jpg",
+      "bytes": 24787
+    },
+    {
+      "sku": "SKU-BAKE-002",
+      "productName": "Croissant cacao Dulcesol Granel",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/841/008/701/2018/front_fr.25.400.jpg",
+      "file": "packages/api/uploads/products/SKU-BAKE-002.jpg",
+      "url": "/uploads/products/SKU-BAKE-002.jpg",
+      "bytes": 20671
+    },
+    {
+      "sku": "SKU-BAKE-003",
+      "productName": "Petits Muffins Chocolat",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/317/853/040/8515/front_en.105.400.jpg",
+      "file": "packages/api/uploads/products/SKU-BAKE-003.jpg",
+      "url": "/uploads/products/SKU-BAKE-003.jpg",
+      "bytes": 27711
+    },
+    {
+      "sku": "SKU-BAKE-004",
+      "productName": "Bagel (4 pcs)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-BAKE-004/600/600",
+      "file": "packages/api/uploads/products/SKU-BAKE-004.jpg",
+      "url": "/uploads/products/SKU-BAKE-004.jpg",
+      "bytes": 27974
+    },
+    {
+      "sku": "SKU-BAKE-005",
+      "productName": "pain Burger complet",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/302/933/080/1924/front_en.3.400.jpg",
+      "file": "packages/api/uploads/products/SKU-BAKE-005.jpg",
+      "url": "/uploads/products/SKU-BAKE-005.jpg",
+      "bytes": 35096
+    },
+    {
+      "sku": "SKU-MEAT-001",
+      "productName": "Rôti de Poulet - 100% filet",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/330/274/003/9362/front_en.6.400.jpg",
+      "file": "packages/api/uploads/products/SKU-MEAT-001.jpg",
+      "url": "/uploads/products/SKU-MEAT-001.jpg",
+      "bytes": 32676
+    },
+    {
+      "sku": "SKU-MEAT-002",
+      "productName": "Parmentier de saumon 🐟",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/357/149/267/0004/front_fr.92.400.jpg",
+      "file": "packages/api/uploads/products/SKU-MEAT-002.jpg",
+      "url": "/uploads/products/SKU-MEAT-002.jpg",
+      "bytes": 40178
+    },
+    {
+      "sku": "SKU-MEAT-003",
+      "productName": "Mutton (500 g)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-MEAT-003/600/600",
+      "file": "packages/api/uploads/products/SKU-MEAT-003.jpg",
+      "url": "/uploads/products/SKU-MEAT-003.jpg",
+      "bytes": 21334
+    },
+    {
+      "sku": "SKU-MEAT-004",
+      "productName": "Tuna Can (185 g)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-MEAT-004/600/600",
+      "file": "packages/api/uploads/products/SKU-MEAT-004.jpg",
+      "url": "/uploads/products/SKU-MEAT-004.jpg",
+      "bytes": 70974
+    },
+    {
+      "sku": "SKU-HOUSE-001",
+      "productName": "Dish Soap (500 ml)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-HOUSE-001/600/600",
+      "file": "packages/api/uploads/products/SKU-HOUSE-001.jpg",
+      "url": "/uploads/products/SKU-HOUSE-001.jpg",
+      "bytes": 42119
+    },
+    {
+      "sku": "SKU-HOUSE-002",
+      "productName": "Toilet Paper (6 rolls)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-HOUSE-002/600/600",
+      "file": "packages/api/uploads/products/SKU-HOUSE-002.jpg",
+      "url": "/uploads/products/SKU-HOUSE-002.jpg",
+      "bytes": 45622
+    },
+    {
+      "sku": "SKU-HOUSE-003",
+      "productName": "Floor Cleaner (1 L)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-HOUSE-003/600/600",
+      "file": "packages/api/uploads/products/SKU-HOUSE-003.jpg",
+      "url": "/uploads/products/SKU-HOUSE-003.jpg",
+      "bytes": 61051
+    },
+    {
+      "sku": "SKU-HOUSE-004",
+      "productName": "Laundry Detergent (1 kg)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-HOUSE-004/600/600",
+      "file": "packages/api/uploads/products/SKU-HOUSE-004.jpg",
+      "url": "/uploads/products/SKU-HOUSE-004.jpg",
+      "bytes": 21670
+    },
+    {
+      "sku": "SKU-HOUSE-005",
+      "productName": "Trash Bags (30 pcs)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-HOUSE-005/600/600",
+      "file": "packages/api/uploads/products/SKU-HOUSE-005.jpg",
+      "url": "/uploads/products/SKU-HOUSE-005.jpg",
+      "bytes": 62127
+    },
+    {
+      "sku": "SKU-CARE-001",
+      "productName": "Shampoo (200 ml)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-CARE-001/600/600",
+      "file": "packages/api/uploads/products/SKU-CARE-001.jpg",
+      "url": "/uploads/products/SKU-CARE-001.jpg",
+      "bytes": 40813
+    },
+    {
+      "sku": "SKU-CARE-002",
+      "productName": "Mint",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/089/005/100/2203/front_en.3.400.jpg",
+      "file": "packages/api/uploads/products/SKU-CARE-002.jpg",
+      "url": "/uploads/products/SKU-CARE-002.jpg",
+      "bytes": 13223
+    },
+    {
+      "sku": "SKU-CARE-003",
+      "productName": "Hand Soap (125 g)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-CARE-003/600/600",
+      "file": "packages/api/uploads/products/SKU-CARE-003.jpg",
+      "url": "/uploads/products/SKU-CARE-003.jpg",
+      "bytes": 9810
+    },
+    {
+      "sku": "SKU-CARE-004",
+      "productName": "Clean & Clear Foaming Face Wash",
+      "source": "openfoodfacts",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/890/101/218/9504/front_en.3.400.jpg",
+      "file": "packages/api/uploads/products/SKU-CARE-004.jpg",
+      "url": "/uploads/products/SKU-CARE-004.jpg",
+      "bytes": 19178
+    },
+    {
+      "sku": "SKU-CARE-005",
+      "productName": "Deodorant (150 ml)",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/SKU-CARE-005/600/600",
+      "file": "packages/api/uploads/products/SKU-CARE-005.jpg",
+      "url": "/uploads/products/SKU-CARE-005.jpg",
+      "bytes": 67157
+    }
+  ]
+}

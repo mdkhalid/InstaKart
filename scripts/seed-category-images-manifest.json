@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-06-05T14:13:31.058Z",
+  "categories": [
+    {
+      "slug": "fruits-vegetables",
+      "name": "Fruits & Vegetables",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/fruits-vegetables/800/500",
+      "file": "packages/api/uploads/categories/fruits-vegetables.jpg",
+      "url": "/uploads/categories/fruits-vegetables.jpg",
+      "bytes": 52173
+    },
+    {
+      "slug": "dairy-eggs",
+      "name": "Dairy & Eggs",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/dairy-eggs/800/500",
+      "file": "packages/api/uploads/categories/dairy-eggs.jpg",
+      "url": "/uploads/categories/dairy-eggs.jpg",
+      "bytes": 72846
+    },
+    {
+      "slug": "beverages",
+      "name": "Beverages",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/beverages/800/500",
+      "file": "packages/api/uploads/categories/beverages.jpg",
+      "url": "/uploads/categories/beverages.jpg",
+      "bytes": 27643
+    },
+    {
+      "slug": "snacks",
+      "name": "Snacks",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/snacks/800/500",
+      "file": "packages/api/uploads/categories/snacks.jpg",
+      "url": "/uploads/categories/snacks.jpg",
+      "bytes": 75045
+    },
+    {
+      "slug": "bakery",
+      "name": "Bakery",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/bakery/800/500",
+      "file": "packages/api/uploads/categories/bakery.jpg",
+      "url": "/uploads/categories/bakery.jpg",
+      "bytes": 63039
+    },
+    {
+      "slug": "meat-fish",
+      "name": "Meat & Fish",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/meat-fish/800/500",
+      "file": "packages/api/uploads/categories/meat-fish.jpg",
+      "url": "/uploads/categories/meat-fish.jpg",
+      "bytes": 108214
+    },
+    {
+      "slug": "household",
+      "name": "Household",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/household/800/500",
+      "file": "packages/api/uploads/categories/household.jpg",
+      "url": "/uploads/categories/household.jpg",
+      "bytes": 50595
+    },
+    {
+      "slug": "personal-care",
+      "name": "Personal Care",
+      "source": "picsum",
+      "sourceUrl": "https://picsum.photos/seed/personal-care/800/500",
+      "file": "packages/api/uploads/categories/personal-care.jpg",
+      "url": "/uploads/categories/personal-care.jpg",
+      "bytes": 68114
+    }
+  ]
+}

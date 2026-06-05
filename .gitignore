@@ -34,6 +34,9 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
+# Stray files created by PowerShell `> nul` redirects
+nul
+
 # DeepSeek TUI
 .deepseek/
 

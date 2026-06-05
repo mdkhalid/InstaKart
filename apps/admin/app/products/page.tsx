@@ -20,7 +20,7 @@ export default function ProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const { data } = await api.get("/products?limit=100");
+      const { data } = await api.get("/admin/products?limit=100");
       setProducts(data.data?.products || []);
     } catch {
       toast.error("Failed to load products");

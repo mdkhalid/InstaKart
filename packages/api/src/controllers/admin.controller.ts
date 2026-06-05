@@ -701,3 +701,79 @@ export const resetUserPassword = async (req: Request, res: Response) => {
     return errorResponse(res, "Failed to reset password", 500);
   }
 };
+
+// Admin: list all products (including inactive) for the admin panel
+export const adminListProducts = async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
+    const skip = (page - 1) * limit;
+    const { search, categoryId, isActive } = req.query;
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search as string, mode: "insensitive" } },
+        { sku: { contains: search as string, mode: "insensitive" } },
+      ];
+    }
+    if (categoryId) where.categoryId = categoryId as string;
+    if (isActive === "true") where.isActive = true;
+    if (isActive === "false") where.isActive = false;
+
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          category: { select: { id: true, name: true, slug: true } },
+          images: { orderBy: { sortOrder: "asc" }, select: { url: true, isPrimary: true } },
+          _count: { select: { orderItems: true, reviews: true } },
+        },
+      }),
+      prisma.product.count({ where }),
+    ]);
+
+    const enriched = products.map((p) => ({
+      ...p,
+      price: Number(p.price),
+      salePrice: p.salePrice ? Number(p.salePrice) : null,
+      costPrice: p.costPrice ? Number(p.costPrice) : null,
+    }));
+
+    return successResponse(res, {
+      products: enriched,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
+  } catch (error) {
+    console.error("Admin list products error:", error);
+    return errorResponse(res, "Failed to list products", 500);
+  }
+};
+
+// Admin: get a product by id (works for active and inactive)
+export const adminGetProduct = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+        images: { orderBy: { sortOrder: "asc" } },
+        _count: { select: { orderItems: true, reviews: true } },
+      },
+    });
+    if (!product) return errorResponse(res, "Product not found", 404);
+    return successResponse(res, {
+      ...product,
+      price: Number(product.price),
+      salePrice: product.salePrice ? Number(product.salePrice) : null,
+      costPrice: product.costPrice ? Number(product.costPrice) : null,
+    });
+  } catch (error) {
+    console.error("Admin get product error:", error);
+    return errorResponse(res, "Failed to get product", 500);
+  }
+};

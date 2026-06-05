@@ -16,6 +16,7 @@ export const createProductSchema = z.object({
   tags: z.array(z.string()).default([]),
   attributes: z.record(z.any()).optional(),
   isFeatured: z.boolean().default(false),
+  isActive: z.boolean().optional(),
 });
 
 export const updateProductSchema = createProductSchema.partial();

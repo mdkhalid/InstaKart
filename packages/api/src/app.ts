@@ -23,9 +23,14 @@ const app = express();
 
 // Security
 app.use(helmet());
-const corsOrigins = (process.env.CLIENT_URL || "http://localhost:3000")
-  .split(",")
-  .map((s) => s.trim());
+const defaultOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+];
+const corsOrigins = (process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",").map((s) => s.trim())
+  : defaultOrigins
+).filter(Boolean);
 
 app.use(
   cors({

@@ -7,6 +7,7 @@ import {
   updateUser, resetUserPassword, uploadUserAvatar,
   getCoupons, createCoupon, updateCoupon, deleteCoupon,
   getAnalytics,
+  adminListProducts, adminGetProduct,
 } from "../controllers/admin.controller";
 
 const router = Router();
@@ -17,6 +18,10 @@ router.get("/dashboard", getDashboard);
 router.get("/orders", getAllOrders);
 router.get("/orders/:id", getOrderDetail);
 router.put("/orders/:id/status", updateOrderStatus);
+
+// Admin product views (see active AND inactive)
+router.get("/products", adminListProducts);
+router.get("/products/:id", adminGetProduct);
 router.get("/users", getAllUsers);
 router.get("/users/:id", getUserDetail);
 router.put("/users/:id/role", changeUserRole);

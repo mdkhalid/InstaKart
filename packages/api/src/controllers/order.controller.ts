@@ -155,6 +155,16 @@ export const createOrder = async (req: Request, res: Response) => {
     // Clear cart
     await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
+    // Remove ordered products from the user's wishlist (so the wishlist
+    // doesn't keep showing items the customer has just bought).
+    const orderedProductIds = orderItems.map((i: any) => i.productId);
+    await prisma.wishlistItem.deleteMany({
+      where: {
+        productId: { in: orderedProductIds },
+        wishlist: { userId },
+      },
+    });
+
     // Send confirmation email
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (user) {
