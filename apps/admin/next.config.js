@@ -4,6 +4,8 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "res.cloudinary.com" },
       { protocol: "https", hostname: "via.placeholder.com" },
+      { protocol: "https", hostname: "mcprod.sparindia.com" },
+      { protocol: "https", hostname: "www.sparindia.com" },
     ],
   },
   async rewrites() {
