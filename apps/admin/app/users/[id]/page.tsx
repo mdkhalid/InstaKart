@@ -8,6 +8,8 @@ import {
   Package, RefreshCw, Save, Edit3, Camera,
 } from "lucide-react";
 import { StatusBadge, getStatusVariant } from "@/components/StatusBadge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirm } from "@/hooks/useConfirm";
 import { formatPrice, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
@@ -65,6 +67,7 @@ export default function AdminUserDetailPage() {
   const [showResetPwd, setShowResetPwd] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [resetting, setResetting] = useState(false);
+  const { confirm, dialogProps } = useConfirm();
 
   const fetchUser = useCallback(async () => {
     setLoading(true);
@@ -135,7 +138,13 @@ export default function AdminUserDetailPage() {
       toast.error("Password must be at least 8 characters");
       return;
     }
-    if (!confirm("Are you sure you want to reset this user's password? They will be logged out of all sessions.")) return;
+    const ok = await confirm({
+      title: "Reset this user's password?",
+      message: "They will be logged out of all sessions immediately and need to log in again with the new password.",
+      confirmText: "Reset password",
+      variant: "danger",
+    });
+    if (!ok) return;
 
     setResetting(true);
     try {
@@ -498,6 +507,7 @@ export default function AdminUserDetailPage() {
           </div>
         </div>
       </div>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </div>
   );
 }

@@ -7,6 +7,8 @@ import {
   Clock, RefreshCw,
 } from "lucide-react";
 import { StatusBadge, getStatusVariant } from "@/components/StatusBadge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirm } from "@/hooks/useConfirm";
 import { formatPrice, formatDate } from "@/lib/utils";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -41,6 +43,7 @@ export default function AdminOrderDetailPage() {
   const [newStatus, setNewStatus] = useState("");
   const [statusNote, setStatusNote] = useState("");
   const [updating, setUpdating] = useState(false);
+  const { confirm, dialogProps } = useConfirm();
 
   const fetchOrder = useCallback(async () => {
     setLoading(true);
@@ -67,11 +70,23 @@ export default function AdminOrderDetailPage() {
 
   const handleStatusUpdate = async (status: string) => {
     // Confirmation for destructive actions
-    if (status === "CANCELLED" && !confirm("Are you sure you want to cancel this order? This will restore stock and notify the customer.")) {
-      return;
+    if (status === "CANCELLED") {
+      const ok = await confirm({
+        title: "Cancel this order?",
+        message: "This will restore stock and notify the customer. The order cannot be reactivated.",
+        confirmText: "Cancel order",
+        variant: "danger",
+      });
+      if (!ok) return;
     }
-    if (status === "REFUNDED" && !confirm("Are you sure you want to refund this order? This will restore stock.")) {
-      return;
+    if (status === "REFUNDED") {
+      const ok = await confirm({
+        title: "Refund this order?",
+        message: "This will restore stock. The original payment will be returned to the customer.",
+        confirmText: "Refund order",
+        variant: "danger",
+      });
+      if (!ok) return;
     }
 
     setUpdating(true);
@@ -475,6 +490,7 @@ export default function AdminOrderDetailPage() {
           </div>
         </div>
       </div>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </div>
   );
 }

@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useConfirm } from "@/hooks/useConfirm";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 
@@ -14,6 +16,7 @@ export default function CategoriesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingCat, setEditingCat] = useState<any>(null);
   const [form, setForm] = useState({ name: "", description: "", parentId: "", sortOrder: 0 });
+  const { confirm, dialogProps } = useConfirm();
 
   useEffect(() => {
     fetchCategories();
@@ -55,7 +58,13 @@ export default function CategoriesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure?")) return;
+    const ok = await confirm({
+      title: "Delete category?",
+      message: "Products in this category will become uncategorised. This action cannot be undone.",
+      confirmText: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await api.delete(`/categories/${id}`);
       toast.success("Category deleted");
@@ -149,6 +158,7 @@ export default function CategoriesPage() {
           </Button>
         </div>
       </Dialog>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </div>
   );
 }

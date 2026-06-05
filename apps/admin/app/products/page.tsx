@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Plus, Edit, ToggleLeft, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useConfirm } from "@/hooks/useConfirm";
 import { formatPrice } from "@/lib/utils";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -13,6 +15,7 @@ export default function ProductsPage() {
   const router = useRouter();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { confirm, dialogProps } = useConfirm();
 
   useEffect(() => {
     fetchProducts();
@@ -40,7 +43,13 @@ export default function ProductsPage() {
   };
 
   const deleteProduct = async (id: string) => {
-    if (!confirm("Are you sure?")) return;
+    const ok = await confirm({
+      title: "Delete product?",
+      message: "This will permanently remove the product and its images. This action cannot be undone.",
+      confirmText: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await api.delete(`/products/${id}`);
       toast.success("Product deleted");
@@ -120,6 +129,7 @@ export default function ProductsPage() {
         </button>
       </div>
       <DataTable columns={columns} data={products} loading={loading} searchable />
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </div>
   );
 }

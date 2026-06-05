@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { Plus, Edit2, Trash2, ToggleLeft, Percent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useConfirm } from "@/hooks/useConfirm";
 import { formatPrice } from "@/lib/utils";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -35,6 +37,7 @@ export default function CouponsPage() {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const { confirm, dialogProps } = useConfirm();
   const [editingCoupon, setEditingCoupon] = useState<any>(null);
   const [form, setForm] = useState<CouponForm>(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -106,7 +109,13 @@ export default function CouponsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this coupon?")) return;
+    const ok = await confirm({
+      title: "Delete coupon?",
+      message: "Customers will no longer be able to use this code. This action cannot be undone.",
+      confirmText: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await api.delete(`/admin/coupons/${id}`);
       toast.success("Coupon deleted");
@@ -349,6 +358,7 @@ export default function CouponsPage() {
           </div>
         </div>
       </Dialog>
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </div>
   );
 }
