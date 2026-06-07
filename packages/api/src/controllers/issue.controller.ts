@@ -12,7 +12,14 @@ export const createOrderIssue = async (req: Request, res: Response) => {
   try {
     const { id: orderId } = req.params;
     const userId = req.user!.userId;
-    const { type, description, photoUrls = [], orderItemId } = req.body;
+    const { type, description } = req.body;
+    const photoUrls: string[] = Array.isArray(req.body?.photoUrls)
+      ? req.body.photoUrls.filter((u: any) => typeof u === "string")
+      : [];
+    const orderItemId: string | undefined =
+      typeof req.body?.orderItemId === "string" && req.body.orderItemId
+        ? req.body.orderItemId
+        : undefined;
 
     if (!type) {
       return errorResponse(res, "Issue type is required", 400);
@@ -82,7 +89,8 @@ export const createOrderIssue = async (req: Request, res: Response) => {
         photoUrls,
         orderItemId: orderItemId || null,
         status: initialStatus,
-        refundAmount: isAutoApprove ? claimAmount : null,
+        // Pass as string for Decimal precision (Prisma recommends string for Decimal)
+        refundAmount: isAutoApprove ? claimAmount.toFixed(2) : null,
         refundMethod: isAutoApprove ? "WALLET" : null,
         resolvedAt: isAutoApprove ? new Date() : null,
       },
@@ -102,15 +110,25 @@ export const createOrderIssue = async (req: Request, res: Response) => {
 
     return successResponse(
       res,
-      issue,
+      {
+        ...issue,
+        refundAmount: issue.refundAmount ? Number(issue.refundAmount) : null,
+      },
       isAutoApprove
         ? `Issue auto-approved. ₹${claimAmount} will be refunded to your wallet within 24 hours.`
         : "Issue reported. Our team will review and respond shortly.",
       201
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Create order issue error:", error);
-    return errorResponse(res, "Failed to report issue", 500);
+    console.error("Stack:", error?.stack);
+    console.error("Code:", error?.code);
+    console.error("Meta:", error?.meta);
+    return errorResponse(
+      res,
+      `Failed to report issue: ${error?.message || "Unknown error"}`,
+      500
+    );
   }
 };
 
@@ -279,7 +297,7 @@ export const resolveIssue = async (req: Request, res: Response) => {
         where: { id },
         data: {
           status: "APPROVED",
-          refundAmount: finalAmount,
+          refundAmount: finalAmount.toFixed(2),
           refundMethod: refundMethod || "WALLET",
           adminNotes: adminNotes || null,
           resolvedById: adminId,
@@ -298,10 +316,23 @@ export const resolveIssue = async (req: Request, res: Response) => {
       return updatedIssue;
     });
 
-    return successResponse(res, updated, `Issue approved. ₹${finalAmount} refund initiated.`);
-  } catch (error) {
+    return successResponse(
+      res,
+      {
+        ...updated,
+        refundAmount: updated.refundAmount ? Number(updated.refundAmount) : null,
+      },
+      `Issue approved. ₹${finalAmount} refund initiated.`
+    );
+  } catch (error: any) {
     console.error("Resolve issue error:", error);
-    return errorResponse(res, "Failed to resolve issue", 500);
+    console.error("Stack:", error?.stack);
+    console.error("Code:", error?.code);
+    return errorResponse(
+      res,
+      `Failed to resolve issue: ${error?.message || "Unknown error"}`,
+      500
+    );
   }
 };
 
