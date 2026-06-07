@@ -10,6 +10,7 @@ import { Badge, statusBadgeVariant } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { OrderTracker } from "@/components/order/OrderTracker";
+import { QuickReorderPanel } from "@/components/order/QuickReorderPanel";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useConfirm } from "@/hooks/useConfirm";
@@ -105,6 +106,13 @@ export default function OrderDetailPage() {
         <div className="bg-white border rounded-xl p-6 mb-6">
           <OrderTracker currentStatus={order.status} cancelled={order.status === "CANCELLED"} />
         </div>
+
+        {/* Quick Reorder Panel */}
+        {order.status !== "CANCELLED" && order.status !== "REFUNDED" && (
+          <div className="bg-white border rounded-xl p-6 mb-6">
+            <QuickReorderPanel orderId={order.id} />
+          </div>
+        )}
 
         {/* Items */}
         <div className="bg-white border rounded-xl p-6 mb-6">

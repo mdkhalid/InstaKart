@@ -1,0 +1,1175 @@
+{
+  "generatedAt": "2026-06-05T19:38:05.000Z",
+  "categories": [
+    {
+      "slug": "add-taste-to-you-food-20-off",
+      "name": "Add taste to you food 20% off",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "after-shave",
+      "name": "After Shave",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "agarbatti",
+      "name": "Agarbatti",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "air-freshener",
+      "name": "Air Freshener",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "all-season-fruits",
+      "name": "All Season Fruits",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "all-under-99",
+      "name": "All under 99",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "almond",
+      "name": "Almond",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "aluminium-foils",
+      "name": "Aluminium Foils",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "always-yummy-upto-50-off",
+      "name": "Always yummy upto 50% off",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "anjeer",
+      "name": "Anjeer",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "antiseptics",
+      "name": "Antiseptics",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "apparel-accessories",
+      "name": "Apparel Accessories",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "atta",
+      "name": "Atta",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "atta-rice-dal",
+      "name": "Atta, Rice & Dal",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "baby-care",
+      "name": "Baby Care",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "baby-care-kids",
+      "name": "Baby Care & Kids",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "bakery",
+      "name": "Bakery",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "basic-veg",
+      "name": "Basic Veg",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "basmati-rice",
+      "name": "Basmati Rice",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "bath-body",
+      "name": "Bath & Body",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "beans",
+      "name": "BEANS",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "beauty-cosmetics-b",
+      "name": "Beauty & Cosmetics b",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "beauty-care-upto-25-off",
+      "name": "beauty care upto 25% off",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "berries",
+      "name": "Berries",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "berry-fruits",
+      "name": "BERRY FRUITS",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "beverages-cold",
+      "name": "Beverages-Cold",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "beverages",
+      "name": "Beverages",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "biscuits-cookies",
+      "name": "Biscuits & Cookies",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "blended-oil",
+      "name": "Blended Oil",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "boneless",
+      "name": "Boneless",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "branded-eggs",
+      "name": "BRANDED EGGS",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "breakfast-cereals",
+      "name": "Breakfast Cereals",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "brown-eggs",
+      "name": "Brown Eggs",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "butter",
+      "name": "Butter",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "button-mushrooms",
+      "name": "BUTTON MUSHROOMS",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "candies",
+      "name": "Candies",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "capsicums",
+      "name": "CAPSICUMS",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "cashew",
+      "name": "Cashew",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "cheese",
+      "name": "Cheese",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "chicken-cuts",
+      "name": "Chicken Cuts",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "chicken-egg",
+      "name": "CHICKEN EGG",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "chicken-offal",
+      "name": "Chicken Offal",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "chicken-whole",
+      "name": "Chicken Whole",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "chicken-whole-cuts",
+      "name": "Chicken Whole & Cuts",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "chilli-powder",
+      "name": "Chilli Powder",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "chips-wafers",
+      "name": "Chips & Wafers",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "chocolates",
+      "name": "Chocolates",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "chocolates-candies",
+      "name": "Chocolates & Candies",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "chutney",
+      "name": "Chutney",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "citrus",
+      "name": "CITRUS",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "cleaners",
+      "name": "Cleaners",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "cold-relief",
+      "name": "Cold Relief",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "compost",
+      "name": "COMPOST",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "condiments",
+      "name": "CONDIMENTS",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "cooking-oil",
+      "name": "Cooking Oil",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "corn-veg",
+      "name": "CORN VEG",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "cow-ghee",
+      "name": "Cow Ghee",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "crabs",
+      "name": "CRABS",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "crustaceans",
+      "name": "Crustaceans",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "cucumbers",
+      "name": "CUCUMBERS",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "curd",
+      "name": "Curd",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "cut-fruits",
+      "name": "CUT FRUITS",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "cut-vegfresh-salads",
+      "name": "CUT VEG/FRESH SALADS",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "dairy",
+      "name": "Dairy",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "dairy-beverages",
+      "name": "Dairy & Beverages",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "dairy-bread-eggs",
+      "name": "Dairy bread & Eggs",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "dal",
+      "name": "DAL",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "dates",
+      "name": "Dates",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "delicatessen-concessionaire",
+      "name": "DELICATESSEN-CONCESSIONAIRE",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "deos-perfumes",
+      "name": "Deos & Perfumes",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "detergent-fabric-care",
+      "name": "Detergent & Fabric Care",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "dishwash-bars",
+      "name": "Dishwash Bars",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "dishwash-liquid",
+      "name": "Dishwash Liquid",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "dried-seeds",
+      "name": "Dried Seeds",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "dry-food",
+      "name": "Dry Food",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "dry-fruits",
+      "name": "Dry Fruits",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "eggs",
+      "name": "Eggs",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "eurochinese-veg",
+      "name": "EURO/CHINESE VEG",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "exotic-delights-20-off",
+      "name": "Exotic delights 20% off",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "exotic-meat",
+      "name": "Exotic Meat",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "festival",
+      "name": "Festival",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "festive",
+      "name": "Festive",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "fish-meat-b",
+      "name": "Fish & meat-b",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "fish-meat",
+      "name": "Fish & Meat",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "fish-and-meat",
+      "name": "FISH AND MEAT",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "fresh-herbs",
+      "name": "FRESH HERBS",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "fresh-vegetables",
+      "name": "Fresh Vegetables",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "freshly",
+      "name": "FRESHLY",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "freshners-repellents",
+      "name": "Freshners & Repellents",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "frozen",
+      "name": "Frozen",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "fruit-and-veg",
+      "name": "FRUIT AND VEG",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "garbage-bags",
+      "name": "Garbage Bags",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "general-merchandise",
+      "name": "GENERAL MERCHANDISE",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "ghee",
+      "name": "Ghee",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "gifting-personal-care-",
+      "name": "Gifting Personal Care ",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "grains",
+      "name": "Grains",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "grocery",
+      "name": "GROCERY",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "groom-yourself-upto-25-off",
+      "name": "Groom yourself upto 25% off",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "hair-care",
+      "name": "Hair Care",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "hakka-noodles",
+      "name": "Hakka Noodles",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "hand-wash-sanitizer",
+      "name": "Hand Wash & Sanitizer",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "health-wellness",
+      "name": "Health & Wellness",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "home-kitchen",
+      "name": "Home & Kitchen",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "indian-sweets",
+      "name": "Indian Sweets",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "instant-food",
+      "name": "Instant Food",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "instant-noodles",
+      "name": "Instant Noodles",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "jaggery",
+      "name": "Jaggery",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "jams-spreads",
+      "name": "Jams & Spreads",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "lime-pickles",
+      "name": "Lime Pickles",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "mango-pickles",
+      "name": "Mango Pickles",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "masala-spices",
+      "name": "Masala & spices",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "mixed-pickles",
+      "name": "Mixed Pickles",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "moisturizer-day-cream",
+      "name": "Moisturizer & Day Cream",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "moong",
+      "name": "Moong",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "mouth-wash",
+      "name": "Mouth Wash",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "namkeens",
+      "name": "Namkeens",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "one-shop-solution-b",
+      "name": "one shop solution-b",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "oral-care",
+      "name": "Oral Care",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "organic-dal",
+      "name": "Organic Dal",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "organic-food",
+      "name": "Organic Food",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "other-pickles",
+      "name": "Other Pickles",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "other-snacks",
+      "name": "Other Snacks",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "packaged-food",
+      "name": "Packaged Food",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "personal-care",
+      "name": "Personal Care",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "powering-your-world-20-off",
+      "name": "Powering your world 20% off",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "rajma",
+      "name": "Rajma",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "salt",
+      "name": "Salt",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "salt-sugar-jaggery",
+      "name": "Salt / Sugar / Jaggery",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "tadka-upto-30-off",
+      "name": "Tadka upto 30% off",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    },
+    {
+      "slug": "urad",
+      "name": "Urad",
+      "source": "sparindia",
+      "sourceUrl": "",
+      "url": "",
+      "file": "",
+      "bytes": 0
+    }
+  ]
+}

@@ -266,6 +266,107 @@ export const getOrder = async (req: Request, res: Response) => {
   }
 };
 
+export const getReorderPreview = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.userId;
+
+    const order = await prisma.order.findFirst({
+      where: { id, userId },
+      include: { items: true },
+    });
+
+    if (!order) return errorResponse(res, "Order not found", 404);
+
+    const productIds = order.items.map((i) => i.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        price: true,
+        salePrice: true,
+        stock: true,
+        isAvailable: true,
+        isActive: true,
+        unit: true,
+        images: {
+          take: 1,
+          orderBy: { sortOrder: "asc" },
+          select: { url: true, altText: true },
+        },
+      },
+    });
+
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    const available: any[] = [];
+    const unavailable: any[] = [];
+
+    for (const item of order.items) {
+      const product = productMap.get(item.productId);
+
+      if (!product || !product.isActive) {
+        unavailable.push({
+          productId: item.productId,
+          name: item.productName,
+          reason: "DISCONTINUED",
+        });
+        continue;
+      }
+
+      if (!product.isAvailable || product.stock <= 0) {
+        unavailable.push({
+          productId: item.productId,
+          name: product.name,
+          reason: "OUT_OF_STOCK",
+          currentStock: 0,
+        });
+        continue;
+      }
+
+      const currentPrice = product.salePrice ? Number(product.salePrice) : Number(product.price);
+      const originalPrice = Number(product.price);
+      const maxQty = Math.min(item.quantity, product.stock);
+
+      available.push({
+        productId: product.id,
+        name: product.name,
+        slug: product.slug,
+        imageUrl: product.images[0]?.url || item.productImage || null,
+        altText: product.images[0]?.altText || null,
+        unit: product.unit,
+        currentPrice,
+        originalPrice,
+        priceChanged: currentPrice !== Number(item.unitPrice),
+        previousUnitPrice: Number(item.unitPrice),
+        availableStock: product.stock,
+        originalQuantity: item.quantity,
+        maxQuantity: maxQty,
+        isAvailable: true,
+      });
+    }
+
+    return successResponse(res, {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      orderedAt: order.createdAt,
+      items: available,
+      unavailableItems: unavailable,
+      summary: {
+        totalItems: order.items.length,
+        availableCount: available.length,
+        unavailableCount: unavailable.length,
+        canFulfillFully: unavailable.length === 0,
+      },
+    });
+  } catch (error) {
+    console.error("Get reorder preview error:", error);
+    return errorResponse(res, "Failed to build reorder preview", 500);
+  }
+};
+
 export const cancelOrder = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

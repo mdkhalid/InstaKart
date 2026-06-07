@@ -24,6 +24,7 @@
 13. [DevOps & Infrastructure](#13-devops--infrastructure)
 14. [Data & Analytics](#14-data--analytics)
 15. [Implementation Roadmap](#15-implementation-roadmap)
+16. [Additional Feature Brainstorm](#16-additional-feature-brainstorm)
 
 ---
 
@@ -936,3 +937,401 @@ Use a feature flag + experiment service (LaunchDarkly, PostHog, or custom) to te
 | **Business** | — | Reviews & ratings, loyalty, referrals | Multi-vendor, subscriptions |
 
 > **Note:** This document is a living guide. Prioritize based on your team's bandwidth, user feedback, and business goals. Start with the Critical Fixes section—those impact correctness and trust. ✅ = Completed, 🚧 = In Progress, ⬜ = Not Started
+
+---
+
+## 16. Additional Feature Brainstorm
+
+> **Scope:** Customer-facing, ops, and growth features that complement (not duplicate) the earlier sections. Grouped by strategic intent. Effort labels: **S** = ≤1 day, **M** = 2–5 days, **L** = 1–2 weeks, **XL** = 2+ weeks.
+
+### 16.1 Conversion Boosters
+
+#### 16.1.1 Smart Substitution Engine ⬜  · **Effort: M**
+When an item is out of stock, the checkout should not silently fail or require manual replacement. Build an automatic substitution engine.
+
+- **Rule-based layer:** same category + price band (±10%) + higher rating first.
+- **ML layer (Phase 2):** learn from past accept/reject decisions per user.
+- **UX:** show substitution in checkout with original/substitute side-by-side, one-tap accept/reject, partial-fill option (deliver in-stock items now, refund rest).
+
+```typescript
+// packages/api/src/services/substitution.service.ts
+export const suggestSubstitutes = async (productId: string, userId?: string) => {
+  const original = await prisma.product.findUnique({ where: { id: productId } });
+  return prisma.product.findMany({
+    where: {
+      categoryId: original.categoryId,
+      id: { not: productId },
+      isActive: true,
+      isAvailable: true,
+      price: { gte: Number(original.price) * 0.9, lte: Number(original.price) * 1.1 },
+    },
+    orderBy: [{ averageRating: "desc" }, { price: "asc" }],
+    take: 3,
+  });
+};
+```
+
+#### 16.1.2 Live Stock Pressure Indicators ⬜  · **Effort: S**
+Show social-proof style stock messages:
+- "Only 3 left in your area"
+- "23 people viewing this"
+- "Selling fast — 12 sold in last hour"
+
+Track with Redis counters incremented on product view / order placed.
+
+#### 16.1.3 Recently Bought by Friends (Social Proof) ⬜  · **Effort: M**
+When signed in, surface "X bought this" for users in the customer's contact list who have opted in. Requires phone-contact permission and a privacy toggle.
+
+#### 16.1.4 Time-of-Day Dynamic Pricing ⬜  · **Effort: M**
+Discount slow hours (e.g., 2–5 PM), premium pricing for peak (7–9 PM). Admin configurable per category.
+
+```prisma
+model DynamicPricingRule {
+  id        String   @id @default(cuid())
+  categoryId String?
+  dayOfWeek Int      // 0-6, null = every day
+  startTime String   // "14:00"
+  endTime   String   // "17:00"
+  multiplier Decimal @db.Decimal(4, 2)  // 0.85 = 15% off, 1.10 = 10% surge
+  isActive  Boolean  @default(true)
+}
+```
+
+#### 16.1.5 Geofenced Promotions ⬜  · **Effort: M**
+Different offers based on user location (mall, office park, train station). Useful for partnerships and contextual marketing.
+
+#### 16.1.6 One-Tap Reorder Baskets ⬜  · **Effort: S**
+Let users save a named basket ("Weekly Groceries", "Office Snacks") and reorder it with one tap. Different from "Buy It Again" — these are curated, manually assembled.
+
+```prisma
+model SavedBasket {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  items     Json     // [{ productId, quantity }]
+  createdAt DateTime @default(now())
+}
+```
+
+#### 16.1.7 Quick Reorder Home Screen Widget ⬜  · **Effort: S**
+A persistent "Reorder last 3 items" pill on the homepage for repeat customers. Massive retention win.
+
+---
+
+### 16.2 Trust, Quality & Sustainability
+
+#### 16.2.1 Item-Level Quality Rating ⬜  · **Effort: S**
+Today, users rate the order/delivery. Add per-item quality (freshness, packaging, accuracy) on the order detail page. Critical for grocery trust.
+
+#### 16.2.2 Vendor / Brand Ratings ⬜  · **Effort: M**
+Aggregate ratings per brand/vendor once the marketplace layer is added. Show on product cards and brand pages.
+
+#### 16.2.3 Order Protection Plan ⬜  · **Effort: M**
+Optional paid insurance (₹9–29) covering damage, missing items, late delivery over 60 min. Pays out as wallet credit automatically.
+
+#### 16.2.4 Eco Packaging Option ⬜  · **Effort: M**
+Customers opt-in to reusable packaging for ₹10 credit per order. Returned packaging inspected, credited, and reused.
+
+#### 16.2.5 Carbon Footprint Badges ⬜  · **Effort: L**
+Estimate CO₂ per product (origin → store → doorstep). Show badge on product cards and cumulative user savings. Requires a footprint database or simple per-category estimates.
+
+#### 16.2.6 Charity Round-Up ⬜  · **Effort: S**
+Round up order total to nearest ₹10/₹50, donate the difference. Partner with a charity (e.g., GiveIndia). Massive brand goodwill at zero cost.
+
+---
+
+### 16.3 Operational & Delivery Innovations
+
+#### 16.3.1 Tip the Delivery Partner ⬜  · **Effort: S**
+Pre-checkout or post-delivery tip that flows to the agent's wallet. Industry standard in the US, growing in India.
+
+```prisma
+model DeliveryTip {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  agentId   String
+  amount    Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+}
+```
+
+#### 16.3.2 Multi-Address Split Delivery ⬜  · **Effort: L**
+A single order delivered to multiple addresses with separate delivery fees. Solves a real "send some to office, rest home" pain point.
+
+```prisma
+model OrderShipment {
+  id          String   @id @default(cuid())
+  orderId     String
+  addressId   String
+  items       Json     // [{ productId, quantity }]
+  status      String   // PENDING, OUT_FOR_DELIVERY, DELIVERED
+  deliveredAt DateTime?
+}
+```
+
+#### 16.3.3 Pickup from Dark Store (Click & Collect) ⬜  · **Effort: L**
+Skip delivery entirely: order online, pick up from a dark store in 15 min. Free for the user, saves the company delivery cost.
+
+#### 16.3.4 Pickup Point Network / Smart Lockers ⬜  · **Effort: XL**
+Partner with apartment complexes, malls, and metro stations to install lockers. Reduces failed deliveries and operational cost.
+
+#### 16.3.5 Real-time Chat with Delivery Agent ⬜  · **Effort: M**
+In-app chat with the assigned agent from "Out for delivery" onwards. Use Socket.io rooms per order. Reduces "where is my order" calls.
+
+#### 16.3.6 Order for Someone Else (Recipient Flow) ⬜  · **Effort: M**
+Place an order delivered to a different address with a different recipient. The recipient gets an SMS/notification with the order details and a unique OTP for handoff.
+
+#### 16.3.7 Multi-Modal Delivery Display ⬜  · **Effort: S**
+Show the delivery mode (bike / EV / cycle) on the tracking screen. Sustainability marketing plus user trust ("delivered by EV = greener choice").
+
+---
+
+### 16.4 Group & Social Commerce
+
+#### 16.4.1 Group Cart / Party Order ⬜  · **Effort: L**
+Multiple people contribute to a single order with individual payment splits. Perfect for offices, hostels, and families.
+
+```prisma
+model GroupOrder {
+  id          String   @id @default(cuid())
+  hostId      String
+  inviteCode  String   @unique
+  status      String   // OPEN, LOCKED, PLACED, CANCELLED
+  cartId      String
+  payments    GroupOrderPayment[]
+  createdAt   DateTime @default(now())
+  lockedAt    DateTime?
+}
+
+model GroupOrderPayment {
+  id          String   @id @default(cuid())
+  groupOrderId String
+  memberId    String
+  amount      Decimal  @db.Decimal(10, 2)
+  paymentStatus String // PENDING, PAID
+  paymentMethod String
+  paidAt      DateTime?
+}
+```
+
+#### 16.4.2 Group Buying (Pool Orders for Discount) ⬜  · **Effort: L**
+"Buy together and save": users in the same pincode pool orders for a specific item to unlock a tier discount (e.g., 10 buyers → 20% off, 25 buyers → 35% off).
+
+#### 16.4.3 Family Account Sharing ⬜  · **Effort: L**
+Multiple family members under one account with shared cart, addresses, payment methods, and order history. Each member has their own login.
+
+```prisma
+model FamilyMember {
+  id        String   @id @default(cuid())
+  ownerId   String
+  memberId  String
+  role      String   // ADMIN, MEMBER
+  joinedAt  DateTime @default(now())
+  
+  @@unique([ownerId, memberId])
+}
+```
+
+#### 16.4.4 Wishlist Sharing ⬜  · **Effort: S**
+Generate a shareable link or QR for any wishlist. Friends can view and (optionally) purchase items as gifts.
+
+---
+
+### 16.5 Personalization & Smart Features
+
+#### 16.5.1 AI Personal Shopper Chat ⬜  · **Effort: L**
+Conversational interface: "I'm hosting 8 friends for dinner on Saturday, vegetarian, budget ₹2000." The chat suggests a cart, lets the user tweak, and checks out.
+
+#### 16.5.2 Smart Pantry Tracking with Photo AI ⬜  · **Effort: XL**
+User logs items at home (manually or via fridge photo). App detects when staples run low and suggests reorders. Premium-tier feature.
+
+#### 16.5.3 Wishlist Price History Chart ⬜  · **Effort: M**
+Track price over time for wishlisted items. Show a small sparkline on the wishlist page with the lowest price.
+
+```prisma
+model PriceHistory {
+  id        String   @id @default(cuid())
+  productId String
+  price     Decimal  @db.Decimal(10, 2)
+  salePrice Decimal? @db.Decimal(10, 2)
+  recordedAt DateTime @default(now())
+  
+  @@index([productId, recordedAt])
+}
+```
+
+#### 16.5.4 Price Drop Alerts ⬜  · **Effort: S**
+Background job scans wishlist items daily, sends push/email when price drops by ≥10%. Uses the `PriceHistory` model above.
+
+#### 16.5.5 Personalized Discount Engine ⬜  · **Effort: L**
+Issue per-user coupon codes based on churn risk, lifetime value, and category affinity. Surface in the profile and via push.
+
+#### 16.5.6 Birthday / Anniversary Auto-Discount ⬜  · **Effort: S**
+Auto-issue a coupon 7 days before the user's birthday (if DOB is set). High open rate, low cost.
+
+---
+
+### 16.6 Discovery & Content
+
+#### 16.6.1 Cooking & Recipe Mode ⬜  · **Effort: L**
+User picks a recipe → all ingredients auto-added to cart in correct quantities. Save recipes to a "Cookbook". Synergizes with the Recipe Integration idea in 11.3 but goes deeper (full cart builder + missing-item warnings).
+
+#### 16.6.2 Live Cooking Classes ⬜  · **Effort: XL**
+Integrate with cooking class platforms (or run your own). Recipe of the day drives a class; attendees get a discount code for ingredients.
+
+#### 16.6.3 Bulk Builder for Events ⬜  · **Effort: M**
+Pre-built bundles for occasions: "Birthday Party for 20", "Housewarming", "Diwali Sweets Box". One-tap add with editable quantities.
+
+#### 16.6.4 Mystery / Surprise Box ⬜  · **Effort: M**
+Mystery box of surplus or short-dated items at deep discount (₹99/₹199). Reduces waste, drives trial, fun for users. Limited quantity per day.
+
+#### 16.6.5 Nutrition & Dietary Filters ⬜  · **Effort: M** *(replaces 11.12 with more detail)*
+Add dietary badges to products (vegan, gluten-free, sugar-free, keto, organic, jain). Filter at the category page level.
+
+```prisma
+model Product {
+  // ...existing
+  dietaryTags String[]  // ["vegan", "gluten-free", "organic"]
+  nutrition   Json?     // { calories, protein, carbs, fat, sugar, sodium }
+}
+```
+
+#### 16.6.6 "Trending in Your Area" ⬜  · **Effort: S**
+Top 10 fastest-moving products in the user's pincode, refreshed hourly via cron + Redis.
+
+---
+
+### 16.7 Retention & Loyalty (Beyond Section 10)
+
+#### 16.7.1 Tiered Loyalty with Visible Progress ⬜  · **Effort: M**
+Bronze / Silver / Gold / Platinum tiers based on quarterly spend. Show a progress bar in profile. Perks: free delivery, priority support, early access to sales.
+
+#### 16.7.2 Subscription Self-Management ⬜  · **Effort: S** *(extends 9.4)*
+Pause for X days, skip next delivery, swap item, change quantity, change frequency. Self-serve UI — no support ticket required.
+
+#### 16.7.3 Daily Streak Rewards ⬜  · **Effort: S**
+Open the app 7 days in a row → unlock a reward (₹20 off, free delivery, surprise coupon). Gamified retention.
+
+#### 16.7.4 Referral Leaderboard ⬜  · **Effort: M**
+Top referrers of the month get bonus rewards + a public profile badge. Public leaderboard on a "Community" page.
+
+#### 16.7.5 First-Order Mystery Item ⬜  · **Effort: S**
+Free surprise item (≤₹50 value) auto-added to first order. Reduces first-order abandonment.
+
+#### 16.7.6 Per-Category Free Delivery Progress ⬜  · **Effort: S**
+Instead of one global free-delivery threshold, show category-specific progress (e.g., "Add ₹80 more dairy for free delivery on dairy").
+
+#### 16.7.7 Instant Refund to Wallet ⬜  · **Effort: S**
+Cancellations and returns default to instant wallet credit (not bank refund). User can withdraw anytime. Increases wallet lock-in.
+
+---
+
+### 16.8 Operational & Admin Power-Ups
+
+#### 16.8.1 Order Exception Dashboard ⬜  · **Effort: M**
+Dedicated view for orders with issues: substitutions needed, partial cancellations, agent no-shows, customer complaints. SLA timers per issue type.
+
+#### 16.8.2 Predictive Stock Reorder Alerts ⬜  · **Effort: L**
+Cron job forecasts next 7 days of demand per product from historical sales + trend. Alerts admin when projected stockout < 3 days.
+
+#### 16.8.3 Fraud Detection Signals ⬜  · **Effort: M**
+Flag suspicious patterns: multiple failed payments, address mismatches, rapid reorder cycles, COD-heavy new users. Admin review queue.
+
+#### 16.8.4 Commission & Payouts Module ⬜  · **Effort: L** *(for future multi-vendor)*
+Track per-vendor commission, generate payout statements, integrate with payment gateway for automated payouts.
+
+#### 16.8.5 Customer Cohort Analysis ⬜  · **Effort: M**
+Cohort retention report: signup month × orders in N months. Helps measure product-market fit and the impact of new features.
+
+#### 16.8.6 A/B Testing Framework ⬜  · **Effort: L**
+Lightweight feature flag + experiment service. Test checkout flows, copy, layouts. Use `unleash-client` or build in-house.
+
+---
+
+### 16.9 Platform & Integration
+
+#### 16.9.1 Buy Now Pay Later (BNPL) ⬜  · **Effort: M**
+Integrate with Simpl, LazyPay, or ZestMoney. Increases average order value 20–30% in the Indian market.
+
+#### 16.9.2 WhatsApp Order Updates ⬜  · **Effort: S** *(lightweight version of 11.10)*
+Transactional WhatsApp messages only: order confirmed, out for delivery, delivered. Use WhatsApp Business API via Interakt / Wati. No full commerce — just status updates where SMS would go.
+
+#### 16.9.3 SMS Notifications ⬜  · **Effort: S** *(already in 11.9)*
+OTP, order confirmed, order out for delivery, delivered. Twilio / MSG91 / Karix.
+
+#### 16.9.4 Apple Wallet / Google Wallet Pass ⬜  · **Effort: M**
+Generate a wallet pass for each order with live status updates. Push notification when status changes. Beautiful UX, very few implementations in India.
+
+#### 16.9.5 Calendar Integration ⬜  · **Effort: S**
+"Add to calendar" for scheduled delivery slot. Reduces missed deliveries.
+
+#### 16.9.6 Alexa / Google Assistant Skill ⬜  · **Effort: L**
+"Alexa, ask InstaCart to reorder milk." Voice-driven reorder for power users.
+
+#### 16.9.7 Public API & Webhooks ⬜  · **Effort: L**
+Let power users and partners (corporate clients) place orders via API. Webhooks for order events.
+
+---
+
+### 16.10 Gamification & Fun
+
+#### 16.10.1 Spin-the-Wheel ⬜  · **Effort: S**
+Daily free spin for discounts, wallet credits, free delivery passes. Drives daily active users.
+
+#### 16.10.2 Achievement Badges ⬜  · **Effort: M**
+"First 10 Orders", "Tried 5 New Categories", "Night Owl", "Healthy Eater". Display on profile, share on social.
+
+#### 16.10.3 Mystery Discount Reveal ⬜  · **Effort: S**
+On checkout, scratch-card style reveal of a discount. Variable value (₹10–₹200) based on cart total. Adds dopamine hit.
+
+#### 16.10.4 Order Streak Bonuses ⬜  · **Effort: S**
+Order every week for 4 weeks → unlock an extra discount on order 5.
+
+#### 16.10.5 Seasonal Limited Items ⬜  · **Effort: S**
+Special products for festivals, sports events, IPL matches. Time-bound availability drives FOMO.
+
+---
+
+### 16.11 Quick Wins (≤ 1 Day Each) ⬜
+
+A condensed list of small, high-ROI additions that don't deserve a full subsection:
+
+| # | Feature | Impact |
+|---|---------|--------|
+| 1 | **Cart total in navbar** (live update) | High |
+| 2 | **Estimated delivery time on product card** | High |
+| 3 | **"You might have forgotten" upsell at checkout** | High |
+| 4 | **Address copy-to-clipboard for sharing location** | Medium |
+| 5 | **Order count badge on profile picture** | Low |
+| 6 | **Empty cart illustration with category suggestions** | Medium |
+| 7 | **"Last ordered X days ago" on past items** | Medium |
+| 8 | **Quick +/- buttons in order history to reorder same qty** | High | ✅ Done |
+| 9 | **Add multiple addresses at once (paste from text)** | Medium |
+| 10 | **Pre-fill search with trending terms on focus** | Medium |
+| 11 | **Toast on add to cart with undo button** | High |
+| 12 | **Order detail share via WhatsApp/SMS** | Medium |
+| 13 | **Cart item "you'll save ₹X with free delivery"** | High |
+| 14 | **Profile-level dietary preference toggle** | Medium |
+| 15 | **Loyalty progress bar on cart page** | Medium |
+| 16 | **Pincode auto-detect from browser GPS** | High |
+| 17 | **Product image zoom on hover/tap** | Medium |
+| 18 | **Recently viewed compact row above PDP** | Medium |
+| 19 | **Stock notification "Notify me when back"** | High |
+| 20 | **Order again button on order detail** | High |
+
+---
+
+### 16.12 Priority Recommendation
+
+If you could only ship 5 features from this section in the next 4 weeks, prioritize:
+
+1. **Smart Substitution Engine (16.1.1)** — Direct revenue protector, reduces refund volume.
+2. **Tip the Delivery Partner (16.3.1)** — Industry standard, high agent retention impact.
+3. **Cart Upsell + Free Shipping Bar combo (16.11.3, 16.11.13)** — AOV uplift, low effort.
+4. **Stock Pressure Indicators (16.1.2)** — Conversion boost, social proof.
+5. **Multi-Address Split Delivery (16.3.2)** — Real differentiation vs Zepto/Blinkit.
+
+---
+
+> **Cross-references:** Many items here complement earlier sections — e.g., 16.4.2 (Group Buying) extends 9.5 (Multi-Vendor), 16.5.3 (Price History) supports 10.1 (Loyalty), 16.7.2 (Subscription Self-Management) builds on 9.4 (Subscriptions). Treat this section as the **second wave** of the product roadmap.
+

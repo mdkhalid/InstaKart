@@ -97,9 +97,11 @@ export function InfiniteProductGrid({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4">
         {Array.from({ length: 8 }).map((_, i) => (
-          <ProductCardSkeleton key={i} />
+          <div key={i} className="min-w-0">
+            <ProductCardSkeleton />
+          </div>
         ))}
       </div>
     );
@@ -107,17 +109,23 @@ export function InfiniteProductGrid({
 
   if (products.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        <p className="text-lg">{emptyMessage}</p>
+      <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
+        <p className="text-4xl mb-2">🔍</p>
+        <p className="text-lg font-medium text-gray-900">{emptyMessage}</p>
+        <p className="text-sm text-gray-500 mt-1">
+          Try a different search or category
+        </p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4">
         {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          <div key={product.id} className="min-w-0">
+            <ProductCard product={product} />
+          </div>
         ))}
       </div>
 
@@ -125,7 +133,7 @@ export function InfiniteProductGrid({
         <>
           <div ref={sentinelRef} className="h-10" aria-hidden />
           {loadingMore && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mt-4">
               {Array.from({ length: 4 }).map((_, i) => (
                 <ProductCardSkeleton key={i} />
               ))}

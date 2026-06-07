@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart, Heart, Eye, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatPrice, formatQuantity } from "@/lib/utils";
+import { formatPrice, formatQuantity, cn } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
 import { useWishlistStore } from "@/stores/wishlistStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -14,12 +14,15 @@ import toast from "react-hot-toast";
 
 interface ProductCardProps {
   product: any;
-  /** "grid" = main product grid (full features: wishlist, quantity).
+  /** "grid" = main product grid (full features: wishlist, quantity, quick view).
    *  "inline" = horizontal-scroll card (compact, with category).
    *  "inline-compact" = even smaller inline card (used by Recently Viewed). */
   variant?: "grid" | "inline" | "inline-compact";
   /** Show a "Trending" badge over the image (inline variant only). */
   trendingBadge?: boolean;
+  /** Called when the user clicks the card body (not the buttons). Used to
+   *  open a quick-view modal instead of navigating. */
+  onQuickView?: (product: any) => void;
 }
 
 const STAR_VALUES = [1, 2, 3, 4, 5];
@@ -51,6 +54,7 @@ export function ProductCard({
   product,
   variant = "grid",
   trendingBadge = false,
+  onQuickView,
 }: ProductCardProps) {
   const { addItem } = useCart();
   const toggleItem = useWishlistStore((s) => s.toggleItem);
@@ -62,6 +66,7 @@ export function ProductCard({
   const imageUrl = product.images?.[0]?.url || "/placeholder.svg";
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const rating = product.rating ?? 0;
+  const outOfStock = !product.isAvailable || product.stock <= 0;
 
   const isGrid = variant === "grid";
   const isCompact = variant === "inline-compact";
@@ -93,7 +98,7 @@ export function ProductCard({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!product.isAvailable || product.stock <= 0) {
+    if (outOfStock) {
       toast.error(`${product.name} is out of stock`);
       return;
     }
@@ -101,67 +106,84 @@ export function ProductCard({
     toast.success(`${product.name} added to cart`);
   };
 
-  // ----- Per-variant class config -----
-  const outerClass = isInline ? `flex-shrink-0 ${isCompact ? "w-56" : "w-64"}` : "";
+  const handleQuickView = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onQuickView?.(product);
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (onQuickView) {
+      e.preventDefault();
+      onQuickView(product);
+    }
+  };
+
+  // ----- Per-variant class config (modern grocery app look) -----
+  const outerClass = isInline
+    ? `flex-shrink-0 snap-start ${isCompact ? "w-48" : "w-56"}`
+    : "min-w-0";
   const cardClass = isGrid
-    ? "rounded-xl border border-gray-200 bg-white overflow-hidden transition-shadow hover:shadow-lg"
+    ? "group flex flex-col h-full bg-white rounded-2xl border border-gray-100 overflow-hidden transition-all duration-300 hover:border-primary-200 hover:shadow-xl hover:-translate-y-0.5"
     : isCompact
-    ? "bg-white rounded-xl border p-3 hover:shadow-lg transition-shadow"
-    : "bg-white rounded-xl border p-4 hover:shadow-lg transition-shadow";
+    ? "flex flex-col h-full bg-white rounded-2xl border border-gray-100 p-3 transition-all duration-300 hover:border-primary-200 hover:shadow-xl hover:-translate-y-0.5"
+    : "flex flex-col h-full bg-white rounded-2xl border border-gray-100 p-4 transition-all duration-300 hover:border-primary-200 hover:shadow-xl hover:-translate-y-0.5";
   const imageAreaClass = isGrid
-    ? "relative h-48 bg-gray-100 overflow-hidden"
-    : `relative ${isCompact ? "h-36" : "h-48"} mb-3`;
-  const contentClass = isGrid ? "p-4" : "";
+    ? "relative w-full aspect-square bg-gray-50 overflow-hidden"
+    : `relative w-full aspect-square overflow-hidden rounded-xl ${isCompact ? "mb-2" : "mb-3"}`;
+  const contentClass = isGrid ? "p-4 flex-1 flex flex-col" : "flex-1 flex flex-col";
   const titleClass =
     isGrid || isCompact
-      ? "font-semibold text-gray-900 text-sm mb-1 line-clamp-2"
-      : "font-semibold text-gray-900 line-clamp-2";
+      ? "font-semibold text-gray-900 text-sm mb-1 line-clamp-2 leading-snug min-h-[2.5rem]"
+      : "font-semibold text-gray-900 line-clamp-2 leading-snug";
   const categoryClass = isCompact
-    ? "text-xs text-gray-500 mt-0.5"
-    : "text-sm text-gray-500 mt-1";
+    ? "text-[11px] text-gray-500 mt-0.5 line-clamp-1"
+    : "text-xs text-gray-500 mt-1 line-clamp-1";
   const priceClass = isGrid
-    ? "flex items-center space-x-2 mb-3"
+    ? "flex items-baseline gap-1.5 mt-auto"
     : isCompact
-    ? "mt-1.5 flex items-center space-x-1"
-    : "mt-2 flex items-center space-x-1";
+    ? "mt-1.5 flex items-baseline gap-1"
+    : "mt-2 flex items-baseline gap-1";
   const starsWrapClass = isGrid
-    ? "flex items-center space-x-1 mb-1"
+    ? "flex items-center mb-1"
     : isCompact
     ? "mt-1.5"
     : "mt-2";
-  const quantityClass = "text-xs text-gray-500 mb-2";
+  const quantityClass = isGrid
+    ? "text-xs text-gray-500 mb-3 line-clamp-1"
+    : "text-xs text-gray-500 mt-1 line-clamp-1";
   const buttonClass = isGrid
-    ? "w-full"
+    ? "w-full mt-2 h-9 text-sm font-medium"
     : isCompact
-    ? "w-full mt-2 text-xs py-1.5"
-    : "w-full mt-2 text-sm";
+    ? "w-full mt-2 h-8 text-xs font-medium"
+    : "w-full mt-2 h-9 text-sm font-medium";
 
   const imageEl = isGrid ? (
     <Image
       src={imageUrl}
       alt={product.name}
       fill
-      className="object-cover group-hover:scale-105 transition-transform duration-300"
+      className="object-cover transition-transform duration-500 group-hover:scale-105"
       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
     />
   ) : (
     <img
       src={imageUrl}
       alt={product.name}
-      className="w-full h-full object-cover rounded-lg"
+      className="block w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
     />
   );
 
   const discountBadge = hasDiscount ? (
     isGrid ? (
-      <Badge variant="destructive" className="absolute top-2 left-2">
+      <Badge variant="destructive" className="absolute top-2.5 left-2.5 text-[10px] font-bold shadow-md">
         {product.discountPercent}% OFF
       </Badge>
     ) : (
       <span
         className={`absolute ${
-          isCompact ? "top-1 left-1" : "top-2 left-2"
-        } bg-red-500 text-white text-xs px-1.5 py-0.5 rounded`}
+          isCompact ? "top-1.5 left-1.5" : "top-2 left-2"
+        } bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow-md`}
       >
         {product.discountPercent}% OFF
       </span>
@@ -172,8 +194,8 @@ export function ProductCard({
     trendingBadge && isInline ? (
       <span
         className={`absolute ${
-          isCompact ? "top-1 right-1" : "top-2 right-2"
-        } bg-primary-500 text-white text-xs px-2 py-1 rounded`}
+          isCompact ? "top-1.5 right-1.5" : "top-2 right-2"
+        } bg-primary-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-md`}
       >
         Trending
       </span>
@@ -182,8 +204,8 @@ export function ProductCard({
   const priceBlock = (
     <div className={priceClass}>
       <span
-        className={`font-medium text-primary-600 ${
-          isCompact ? "text-sm" : isGrid ? "text-lg font-bold" : ""
+        className={`font-bold text-primary-600 ${
+          isCompact ? "text-sm" : isGrid ? "text-lg" : "text-base"
         }`}
       >
         {formatPrice(product.salePrice || product.price)}
@@ -191,7 +213,7 @@ export function ProductCard({
       {hasDiscount && (
         <span
           className={`text-gray-400 line-through ${
-            isCompact ? "text-xs" : "text-sm"
+            isCompact ? "text-[11px]" : "text-xs"
           }`}
         >
           {formatPrice(product.price)}
@@ -210,65 +232,128 @@ export function ProductCard({
     </div>
   );
 
-  const addToCartButton = (
+  // Floating action buttons overlay (grid variant only)
+  const floatingActions = isGrid ? (
+    <div className="absolute top-2.5 right-2.5 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+      <button
+        onClick={handleQuickView}
+        aria-label="Quick view"
+        className="p-1.5 rounded-full bg-white/95 backdrop-blur text-gray-600 hover:text-primary-600 shadow-md hover:scale-110 transition-all"
+      >
+        <Eye className="h-3.5 w-3.5" />
+      </button>
+      <button
+        onClick={handleWishlistToggle}
+        disabled={wishlistLoading}
+        aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+        className={cn(
+          "p-1.5 rounded-full shadow-md hover:scale-110 transition-all",
+          isWishlisted
+            ? "bg-red-500 text-white"
+            : "bg-white/95 backdrop-blur text-gray-600 hover:text-red-500"
+        )}
+      >
+        <Heart
+          className={cn("h-3.5 w-3.5", wishlistLoading && "animate-pulse")}
+          fill={isWishlisted ? "currentColor" : "none"}
+        />
+      </button>
+    </div>
+  ) : (
+    <button
+      onClick={handleWishlistToggle}
+      disabled={wishlistLoading}
+      aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+      className={cn(
+        "absolute top-2 right-2 p-1.5 rounded-full shadow-md transition-all",
+        isWishlisted
+          ? "bg-red-500 text-white"
+          : "bg-white/95 backdrop-blur text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100"
+      )}
+    >
+      <Heart
+        className={cn("h-3.5 w-3.5", wishlistLoading && "animate-pulse")}
+        fill={isWishlisted ? "currentColor" : "none"}
+      />
+    </button>
+  );
+
+  // Mobile-friendly persistent wishlist (always visible on touch)
+  const mobileWishlist = !isGrid ? null : isWishlisted ? (
+    <div className="absolute top-2.5 right-2.5 md:opacity-0 md:group-hover:opacity-100">
+      <button
+        onClick={handleWishlistToggle}
+        disabled={wishlistLoading}
+        aria-label="Remove from wishlist"
+        className="p-1.5 rounded-full bg-red-500 text-white shadow-md"
+      >
+        <Heart className="h-3.5 w-3.5" fill="currentColor" />
+      </button>
+    </div>
+  ) : null;
+
+  const addToCartButton = isGrid ? (
     <Button
       onClick={handleAddToCart}
       size="sm"
       className={buttonClass}
-      disabled={!product.isAvailable || product.stock <= 0}
+      disabled={outOfStock}
     >
-      <ShoppingCart className="h-4 w-4 mr-1" />
-      Add to Cart
+      <Plus className="h-4 w-4 mr-1" />
+      {outOfStock ? "Out of Stock" : "Add"}
+    </Button>
+  ) : (
+    <Button
+      onClick={handleAddToCart}
+      size="sm"
+      className={buttonClass}
+      disabled={outOfStock}
+    >
+      <ShoppingCart className="h-3.5 w-3.5 mr-1" />
+      {outOfStock ? "Out of Stock" : "Add to Cart"}
     </Button>
   );
 
-  // ===== Grid variant: Link wraps card; rating/qty/button are siblings =====
+  // ===== Grid variant: card contains image+content+rating+qty+button =====
   if (isGrid) {
     return (
       <div className={outerClass}>
-        <Link href={`/products/${product.slug}`} className="group block">
-          <div className={cardClass}>
+        <div className={cardClass}>
+          <Link
+            href={`/products/${product.slug}`}
+            className="group block"
+            onClick={handleCardClick}
+          >
             <div className={imageAreaClass}>
               {imageEl}
               {discountBadge}
-              {!product.isAvailable && (
+              {outOfStock && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <span className="text-white font-semibold">Out of Stock</span>
+                  <span className="text-white font-semibold text-sm">Out of Stock</span>
                 </div>
               )}
-              <button
-                onClick={handleWishlistToggle}
-                disabled={wishlistLoading}
-                aria-label={
-                  isWishlisted ? "Remove from wishlist" : "Add to wishlist"
-                }
-                className={`absolute top-2 right-2 p-2 rounded-full shadow transition-all ${
-                  isWishlisted
-                    ? "bg-red-500 text-white hover:bg-red-600"
-                    : "bg-white/90 text-gray-600 hover:bg-white hover:text-red-500"
-                }`}
-              >
-                <Heart
-                  className={`h-4 w-4 ${wishlistLoading ? "animate-pulse" : ""}`}
-                  fill={isWishlisted ? "currentColor" : "none"}
-                />
-              </button>
+              {mobileWishlist}
+              {floatingActions}
             </div>
             <div className={contentClass}>
+              {product.category?.name && (
+                <p className="text-[10px] uppercase tracking-wider text-primary-600 font-semibold mb-1 line-clamp-1">
+                  {product.category.name}
+                </p>
+              )}
               <h3 className={titleClass}>{product.name}</h3>
+              {ratingRow}
+              <p className={quantityClass}>{formatQuantity(product)}</p>
               {priceBlock}
             </div>
-          </div>
-        </Link>
-        {ratingRow}
-        <p className={quantityClass}>{formatQuantity(product)}</p>
-        {addToCartButton}
+          </Link>
+          {addToCartButton}
+        </div>
       </div>
     );
   }
 
-  // ===== Inline variant: card wraps image+link+rating+button (matches
-  // original layout where everything sits inside the white card). =====
+  // ===== Inline variant (horizontal scroll carousels) =====
   return (
     <div className={outerClass}>
       <div className={cardClass}>
@@ -277,6 +362,12 @@ export function ProductCard({
             {imageEl}
             {discountBadge}
             {trendingBadgeEl}
+            {floatingActions}
+            {outOfStock && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
+                <span className="text-white font-semibold text-sm">Out of Stock</span>
+              </div>
+            )}
           </div>
           <h3 className={titleClass}>{product.name}</h3>
           {product.category?.name && (

@@ -74,7 +74,7 @@ export default function WishlistPage() {
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-xl border overflow-hidden">
+              <div key={i} className="min-w-0 rounded-xl border overflow-hidden">
                 <Skeleton className="h-48 w-full" />
                 <div className="p-4 space-y-2">
                   <Skeleton className="h-4 w-3/4" />
@@ -96,7 +96,7 @@ export default function WishlistPage() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {items.map((item) => (
-              <div key={item.id} className="group rounded-xl border bg-white overflow-hidden hover:shadow-lg transition-shadow">
+              <div key={item.id} className="min-w-0 group rounded-xl border bg-white overflow-hidden hover:shadow-lg transition-shadow">
                 <Link href={`/products/${item.product.slug}`} className="block relative h-48 bg-gray-100">
                   {item.product.image ? (
                     <Image
