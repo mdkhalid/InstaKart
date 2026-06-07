@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, CreditCard } from "lucide-react";
+import { ArrowLeft, MapPin, CreditCard, AlertCircle, Clock, CheckCircle2, XCircle, RotateCcw, Image as ImageIcon } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,30 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { OrderTracker } from "@/components/order/OrderTracker";
 import { QuickReorderPanel } from "@/components/order/QuickReorderPanel";
-import { formatPrice, formatDate, formatDateTime } from "@/lib/utils";
+import { IssueReportModal } from "@/components/order/IssueReportModal";
+import { formatPrice, formatDate, formatDateTime, cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useConfirm } from "@/hooks/useConfirm";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import Link from "next/link";
+
+const ISSUE_TYPE_LABELS: Record<string, string> = {
+  WRONG_ITEM: "Wrong item",
+  DAMAGED: "Damaged",
+  MISSING_ITEM: "Missing item",
+  POOR_QUALITY: "Poor quality",
+  EXPIRED: "Near expiry",
+  OTHER: "Other",
+};
+
+const ISSUE_STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "secondary" | "outline"> = {
+  OPEN: "warning",
+  AUTO_APPROVED: "success",
+  APPROVED: "success",
+  REJECTED: "destructive",
+  RESOLVED: "secondary",
+};
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -25,6 +43,9 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [issues, setIssues] = useState<any[]>([]);
+  const [issueWindow, setIssueWindow] = useState<{ canReportNew: boolean; windowExpiresAt: string | null; windowMinutes: number }>({ canReportNew: false, windowExpiresAt: null, windowMinutes: 10 });
+  const [showIssueModal, setShowIssueModal] = useState(false);
   const { confirm, dialogProps } = useConfirm();
 
   useEffect(() => {
@@ -32,7 +53,10 @@ export default function OrderDetailPage() {
       router.push("/login");
       return;
     }
-    if (params?.id) fetchOrder();
+    if (params?.id) {
+      fetchOrder();
+      fetchIssues();
+    }
   }, [params?.id, isAuthenticated]);
 
   const fetchOrder = async () => {
@@ -44,6 +68,20 @@ export default function OrderDetailPage() {
       router.push("/orders");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchIssues = async () => {
+    try {
+      const { data } = await api.get(`/orders/${params.id}/issues`);
+      setIssues(data.data?.issues || []);
+      setIssueWindow({
+        canReportNew: data.data?.canReportNew || false,
+        windowExpiresAt: data.data?.windowExpiresAt || null,
+        windowMinutes: data.data?.windowMinutes || 10,
+      });
+    } catch {
+      // Silent - issues endpoint failure is non-critical
     }
   };
 
@@ -83,6 +121,8 @@ export default function OrderDetailPage() {
   if (!order) return null;
 
   const canCancel = ["PENDING", "CONFIRMED"].includes(order.status);
+  const canReportIssue =
+    order.status === "DELIVERED" && issueWindow.canReportNew;
 
   return (
     <>
@@ -178,9 +218,143 @@ export default function OrderDetailPage() {
             Cancel Order
           </Button>
         )}
+
+        {/* Issues / Refund Section */}
+        {(canReportIssue || issues.length > 0) && (
+          <div className="bg-white border rounded-xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-amber-500" />
+                Issues & Refunds
+              </h2>
+              {canReportIssue && (
+                <Button
+                  onClick={() => setShowIssueModal(true)}
+                  variant="outline"
+                  size="sm"
+                  className="text-amber-700 border-amber-200 hover:bg-amber-50"
+                >
+                  <RotateCcw className="h-4 w-4 mr-1.5" />
+                  Report an Issue
+                </Button>
+              )}
+            </div>
+
+            {canReportIssue && issueWindow.windowExpiresAt && (
+              <div className="flex items-start gap-2 p-3 mb-4 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-800">
+                <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  You can report an issue until{" "}
+                  <strong>
+                    {new Date(issueWindow.windowExpiresAt).toLocaleTimeString(
+                      "en-IN",
+                      { hour: "2-digit", minute: "2-digit" }
+                    )}
+                  </strong>{" "}
+                  ({issueWindow.windowMinutes} min after delivery). After that,
+                  contact support.
+                </div>
+              </div>
+            )}
+
+            {!canReportIssue &&
+              order.status === "DELIVERED" &&
+              issues.length === 0 && (
+                <p className="text-sm text-gray-500">
+                  The issue reporting window has closed. Please contact support
+                  for help.
+                </p>
+              )}
+
+            {issues.length > 0 && (
+              <div className="space-y-3">
+                {issues.map((issue: any) => (
+                  <div
+                    key={issue.id}
+                    className="border border-gray-200 rounded-lg p-4"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-gray-900">
+                          {ISSUE_TYPE_LABELS[issue.type] || issue.type}
+                        </span>
+                        {issue.orderItem && (
+                          <span className="text-xs text-gray-500">
+                            · {issue.orderItem.productName}
+                          </span>
+                        )}
+                      </div>
+                      <Badge
+                        variant={ISSUE_STATUS_VARIANT[issue.status] || "default"}
+                        className="text-xs"
+                      >
+                        {issue.status === "AUTO_APPROVED" && "✓ Auto-Approved"}
+                        {issue.status === "APPROVED" && "✓ Approved"}
+                        {issue.status === "REJECTED" && "✗ Rejected"}
+                        {issue.status === "RESOLVED" && "Resolved"}
+                        {issue.status === "OPEN" && "Under Review"}
+                      </Badge>
+                    </div>
+                    {issue.description && (
+                      <p className="text-sm text-gray-600 mb-2">
+                        {issue.description}
+                      </p>
+                    )}
+                    {issue.photoUrls && issue.photoUrls.length > 0 && (
+                      <div className="flex gap-2 mb-2">
+                        {issue.photoUrls.map((url: string, i: number) => (
+                          <a
+                            key={i}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block w-16 h-16 rounded-lg overflow-hidden border border-gray-200 hover:border-primary-500 transition-colors"
+                          >
+                            <img
+                              src={url}
+                              alt=""
+                              className="block w-full h-full object-cover"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    {issue.refundAmount && (
+                      <div className="flex items-center gap-1.5 text-sm font-semibold text-green-700 mt-2">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Refund of {formatPrice(Number(issue.refundAmount))} via{" "}
+                        {issue.refundMethod === "WALLET"
+                          ? "InstaCart wallet"
+                          : "original payment"}
+                        {issue.status === "AUTO_APPROVED" && " (within 24h)"}
+                      </div>
+                    )}
+                    {issue.adminNotes && (
+                      <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+                        <span className="font-semibold">Admin note:</span>{" "}
+                        {issue.adminNotes}
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-400 mt-2">
+                      Reported on {formatDateTime(issue.createdAt)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
       <Footer />
+      <IssueReportModal
+        orderId={order.id}
+        orderItems={order.items || []}
+        orderTotal={Number(order.total)}
+        open={showIssueModal}
+        onClose={() => setShowIssueModal(false)}
+        onSuccess={fetchIssues}
+      />
     </>
   );
 }

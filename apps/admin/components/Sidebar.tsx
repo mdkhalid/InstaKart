@@ -12,6 +12,7 @@ import {
   Percent,
   BarChart3,
   LogOut,
+  AlertCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -19,6 +20,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/products", label: "Products", icon: Package },
   { href: "/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/issues", label: "Issues & Refunds", icon: AlertCircle },
   { href: "/users", label: "Users", icon: Users },
   { href: "/categories", label: "Categories", icon: Tags },
   { href: "/coupons", label: "Coupons", icon: Percent },

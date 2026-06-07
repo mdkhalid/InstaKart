@@ -1221,8 +1221,23 @@ Free surprise item (≤₹50 value) auto-added to first order. Reduces first-ord
 #### 16.7.6 Per-Category Free Delivery Progress ⬜  · **Effort: S**
 Instead of one global free-delivery threshold, show category-specific progress (e.g., "Add ₹80 more dairy for free delivery on dairy").
 
-#### 16.7.7 Instant Refund to Wallet ⬜  · **Effort: S**
+#### 16.7.7 Instant Refund to Wallet ✅  · **Effort: S**
 Cancellations and returns default to instant wallet credit (not bank refund). User can withdraw anytime. Increases wallet lock-in.
+
+#### 16.7.8 Post-Delivery Issue Reporting ("Report an Issue") ✅  · **Effort: M**
+Customers can flag a problem on a delivered order within 10 minutes: wrong item, damaged, missing, poor quality, expired. Up to 3 photos, optional item-level targeting. **Auto-approves refunds ≤ ₹500 instantly to wallet** (matches Blinkit/Zepto model — no return shipping). Larger issues go to admin queue for manual review with full order context and refund method (wallet vs. original). Admin can override amount, add notes, or reject. Replaces the need for a full return workflow in instant-shopping.
+
+**Implementation:**
+- `OrderIssue` Prisma model + `IssueType`, `IssueStatus`, `RefundMethod` enums
+- `POST /orders/:id/issues` (window check, auto-approve logic)
+- `GET /orders/:id/issues` (issues + remaining window)
+- `GET /admin/issues` (queue with stats + search + status filter)
+- `GET /admin/issues/:id` (detail with order, customer, items, photos)
+- `POST /admin/issues/:id/resolve` (approve with refund amount/method, or reject)
+- `POST /upload/issues` (photo upload, max 3, multer)
+- Web: `IssueReportModal` (type chips, item selector, photos, refund estimate)
+- Web: order detail shows issues list + window-expiry timer
+- Admin: `/issues` queue page + `/issues/[id]` resolution page
 
 ---
 

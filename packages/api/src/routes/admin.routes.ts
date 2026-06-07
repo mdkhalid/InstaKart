@@ -9,6 +9,7 @@ import {
   getAnalytics,
   adminListProducts, adminGetProduct,
 } from "../controllers/admin.controller";
+import { getAllIssues, getIssueDetail, resolveIssue } from "../controllers/issue.controller";
 
 const router = Router();
 
@@ -39,5 +40,10 @@ router.get("/coupons", getCoupons);
 router.post("/coupons", createCoupon);
 router.put("/coupons/:id", updateCoupon);
 router.delete("/coupons/:id", deleteCoupon);
+
+// Order issues (post-delivery customer reports)
+router.get("/issues", getAllIssues);
+router.get("/issues/:id", getIssueDetail);
+router.post("/issues/:id/resolve", resolveIssue);
 
 export default router;

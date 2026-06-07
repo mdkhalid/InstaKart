@@ -39,6 +39,28 @@ enum PaymentMethod {
   UPI
 }
 
+enum IssueType {
+  WRONG_ITEM
+  DAMAGED
+  MISSING_ITEM
+  POOR_QUALITY
+  EXPIRED
+  OTHER
+}
+
+enum IssueStatus {
+  OPEN
+  AUTO_APPROVED
+  APPROVED
+  REJECTED
+  RESOLVED
+}
+
+enum RefundMethod {
+  WALLET
+  ORIGINAL
+}
+
 // ─────────────────────── MODELS ───────────────────────
 
 model User {
@@ -64,6 +86,7 @@ model User {
   productViews     ProductView[]
   refreshTokens    RefreshToken[]
   passwordResets   PasswordReset[]
+  issuesReported   OrderIssue[] @relation("IssueReporter")
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -251,6 +274,7 @@ model Order {
   cancellationReason String?
 
   statusHistory      OrderStatusHistory[]
+  issues             OrderIssue[]
 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -271,6 +295,7 @@ model OrderItem {
   quantity     Int
   unitPrice    Decimal @db.Decimal(10, 2)
   totalPrice   Decimal @db.Decimal(10, 2)
+  issues       OrderIssue[]
 }
 
 model OrderStatusHistory {
@@ -343,4 +368,36 @@ model ProductView {
 
   @@index([userId, createdAt])
   @@index([userId, productId])
+}
+
+model OrderIssue {
+  id            String      @id @default(cuid())
+  orderId       String
+  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reportedById  String
+  reportedBy    User        @relation("IssueReporter", fields: [reportedById], references: [id])
+
+  // What went wrong
+  type          IssueType
+  description   String?
+  photoUrls     String[]    @default([])
+
+  // Affected item (optional - some issues are order-wide like "all items damaged")
+  orderItemId   String?
+  orderItem     OrderItem?  @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+
+  // Resolution
+  status        IssueStatus @default(OPEN)
+  refundAmount  Decimal?    @db.Decimal(10, 2)
+  refundMethod  RefundMethod?
+  adminNotes    String?
+  resolvedById  String?
+  resolvedAt    DateTime?
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([orderId])
+  @@index([status, createdAt])
+  @@index([reportedById, createdAt])
 }
