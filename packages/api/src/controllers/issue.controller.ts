@@ -43,12 +43,12 @@ export const createOrderIssue = async (req: Request, res: Response) => {
       );
     }
 
-    // Check delivery window
-    if (!order.deliveredAt) {
-      return errorResponse(res, "Order has no delivery timestamp", 400);
-    }
+    // Check delivery window (fall back to updatedAt if deliveredAt is missing)
+    const baseDelivery = order.deliveredAt
+      ? new Date(order.deliveredAt)
+      : new Date(order.updatedAt);
     const minutesSinceDelivery =
-      (Date.now() - new Date(order.deliveredAt).getTime()) / 60000;
+      (Date.now() - baseDelivery.getTime()) / 60000;
     if (minutesSinceDelivery > ISSUE_WINDOW_MINUTES) {
       return errorResponse(
         res,
@@ -137,13 +137,18 @@ export const getOrderIssues = async (req: Request, res: Response) => {
     // Compute remaining window for the order
     const orderData = await prisma.order.findUnique({
       where: { id: orderId },
-      select: { deliveredAt: true, status: true },
+      select: { deliveredAt: true, status: true, updatedAt: true },
     });
 
     let canReportNew = false;
     let windowExpiresAt: Date | null = null;
-    if (orderData?.deliveredAt && orderData.status === "DELIVERED") {
-      const expiresAt = new Date(orderData.deliveredAt);
+    if (orderData?.status === "DELIVERED") {
+      // Fall back to updatedAt if deliveredAt is missing (shouldn't happen
+      // but makes the UI more forgiving for older / seeded orders).
+      const baseTime = orderData.deliveredAt
+        ? new Date(orderData.deliveredAt)
+        : new Date(orderData.updatedAt);
+      const expiresAt = new Date(baseTime);
       expiresAt.setMinutes(expiresAt.getMinutes() + ISSUE_WINDOW_MINUTES);
       windowExpiresAt = expiresAt;
       canReportNew = expiresAt.getTime() > Date.now();

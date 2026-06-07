@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, CreditCard, AlertCircle, Clock, CheckCircle2, XCircle, RotateCcw, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, MapPin, CreditCard, AlertCircle, Clock, CheckCircle2, XCircle, RotateCcw, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,12 @@ import { useConfirm } from "@/hooks/useConfirm";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import Link from "next/link";
+
+// Override the issue window from env. Set NEXT_PUBLIC_ISSUE_WINDOW_MINUTES=1440
+// in .env.local during development / QA so the window doesn't expire mid-test.
+const ISSUE_WINDOW_MINUTES = Number(
+  process.env.NEXT_PUBLIC_ISSUE_WINDOW_MINUTES || 10
+);
 
 const ISSUE_TYPE_LABELS: Record<string, string> = {
   WRONG_ITEM: "Wrong item",
@@ -78,11 +84,16 @@ export default function OrderDetailPage() {
       setIssueWindow({
         canReportNew: data.data?.canReportNew || false,
         windowExpiresAt: data.data?.windowExpiresAt || null,
-        windowMinutes: data.data?.windowMinutes || 10,
+        windowMinutes: data.data?.windowMinutes || ISSUE_WINDOW_MINUTES,
       });
-    } catch {
-      // Silent - issues endpoint failure is non-critical
+    } catch (err) {
+      console.warn("Failed to fetch issues (non-critical):", err);
     }
+  };
+
+  const refresh = async () => {
+    await Promise.all([fetchOrder(), fetchIssues()]);
+    toast.success("Order refreshed");
   };
 
   const handleCancel = async () => {
@@ -121,8 +132,21 @@ export default function OrderDetailPage() {
   if (!order) return null;
 
   const canCancel = ["PENDING", "CONFIRMED"].includes(order.status);
-  const canReportIssue =
-    order.status === "DELIVERED" && issueWindow.canReportNew;
+  const isDelivered = order.status === "DELIVERED";
+
+  // Compute the issue-reporting window client-side from order.deliveredAt.
+  // This is the source of truth for the UI. The server's canReportNew is a
+  // fallback used only if deliveredAt is missing from the order payload.
+  const deliveredAt: Date | null = order.deliveredAt
+    ? new Date(order.deliveredAt)
+    : null;
+  const windowExpiresAt: Date | null = deliveredAt
+    ? new Date(deliveredAt.getTime() + ISSUE_WINDOW_MINUTES * 60_000)
+    : null;
+  const clientCanReportNew =
+    isDelivered && windowExpiresAt !== null && windowExpiresAt.getTime() > Date.now();
+  const canReportIssue = clientCanReportNew || (isDelivered && issueWindow.canReportNew);
+  const windowExpired = isDelivered && !canReportIssue;
 
   return (
     <>
@@ -219,52 +243,92 @@ export default function OrderDetailPage() {
           </Button>
         )}
 
-        {/* Issues / Refund Section */}
-        {(canReportIssue || issues.length > 0) && (
+        {/* Issues / Refund Section — always show for DELIVERED orders */}
+        {isDelivered && (
           <div className="bg-white border rounded-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-amber-500" />
                 Issues & Refunds
               </h2>
-              {canReportIssue && (
-                <Button
-                  onClick={() => setShowIssueModal(true)}
-                  variant="outline"
-                  size="sm"
-                  className="text-amber-700 border-amber-200 hover:bg-amber-50"
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={refresh}
+                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Refresh"
+                  title="Refresh order status"
                 >
-                  <RotateCcw className="h-4 w-4 mr-1.5" />
-                  Report an Issue
-                </Button>
-              )}
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+                {canReportIssue && (
+                  <Button
+                    onClick={() => setShowIssueModal(true)}
+                    variant="outline"
+                    size="sm"
+                    className="text-amber-700 border-amber-200 hover:bg-amber-50"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1.5" />
+                    Report an Issue
+                  </Button>
+                )}
+              </div>
             </div>
 
-            {canReportIssue && issueWindow.windowExpiresAt && (
+            {canReportIssue && windowExpiresAt && (
               <div className="flex items-start gap-2 p-3 mb-4 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-800">
                 <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <div>
                   You can report an issue until{" "}
                   <strong>
-                    {new Date(issueWindow.windowExpiresAt).toLocaleTimeString(
-                      "en-IN",
-                      { hour: "2-digit", minute: "2-digit" }
-                    )}
+                    {windowExpiresAt.toLocaleTimeString("en-IN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </strong>{" "}
-                  ({issueWindow.windowMinutes} min after delivery). After that,
-                  contact support.
+                  ({ISSUE_WINDOW_MINUTES} min after delivery
+                  {deliveredAt && (
+                    <>
+                      {" "}
+                      · delivered at{" "}
+                      {deliveredAt.toLocaleTimeString("en-IN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </>
+                  )}
+                  ). After that, contact support.
                 </div>
               </div>
             )}
 
-            {!canReportIssue &&
-              order.status === "DELIVERED" &&
-              issues.length === 0 && (
-                <p className="text-sm text-gray-500">
-                  The issue reporting window has closed. Please contact support
-                  for help.
-                </p>
-              )}
+            {windowExpired && issues.length === 0 && (
+              <div className="flex items-start gap-2 p-3 mb-4 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
+                <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  The {ISSUE_WINDOW_MINUTES}-minute issue reporting window has
+                  closed
+                  {deliveredAt && (
+                    <>
+                      {" "}
+                      (delivered at{" "}
+                      {deliveredAt.toLocaleTimeString("en-IN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      )
+                    </>
+                  )}
+                  . For help with this order, please{" "}
+                  <a
+                    href="mailto:support@instacart.com"
+                    className="text-primary-600 hover:underline font-medium"
+                  >
+                    contact support
+                  </a>
+                  .
+                </div>
+              </div>
+            )}
 
             {issues.length > 0 && (
               <div className="space-y-3">
