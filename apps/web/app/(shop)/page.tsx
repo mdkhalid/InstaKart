@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Search, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -9,8 +9,8 @@ import { InfiniteProductGrid } from "@/components/product/InfiniteProductGrid";
 import { ProductCard } from "@/components/product/ProductCard";
 import { CategoryPills } from "@/components/product/CategoryPills";
 import { QuickViewModal } from "@/components/product/QuickViewModal";
-import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { useCartStore } from "@/stores/cartStore";
 
 export default function HomePage() {
@@ -101,7 +101,8 @@ export default function HomePage() {
     }
   };
 
-  const handleSearch = () => {
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
     const q = search.trim();
     setAppliedSearch(q);
 
@@ -109,6 +110,11 @@ export default function HomePage() {
     if (typeof window === "undefined") return;
     if (!localStorage.getItem("accessToken")) return;
     api.post("/suggestions/track-search", { query: q, resultsCount: 0 }).catch(() => {});
+  };
+
+  const handleClearSearch = () => {
+    setSearch("");
+    setAppliedSearch("");
   };
 
   const listingPageSize = selectedCategory ? 100 : 20;
@@ -127,25 +133,43 @@ export default function HomePage() {
         {/* Compact search bar (Blinkit-style, sticks below navbar) */}
         <section className="sticky top-16 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <div className="flex max-w-2xl mx-auto">
-              <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search for groceries, fruits, dairy..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="w-full pl-11 pr-4 py-2.5 rounded-l-xl border-2 border-r-0 border-gray-200 text-gray-900 text-sm focus:outline-none focus:border-primary-500 transition-colors"
-                />
-              </div>
-              <Button
-                onClick={handleSearch}
-                className="rounded-l-none px-6"
+            <form
+              onSubmit={handleSearch}
+              className="relative max-w-2xl mx-auto"
+              role="search"
+            >
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search for groceries, fruits, dairy..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className={cn(
+                  "w-full pl-11 text-sm text-gray-900 placeholder:text-gray-400",
+                  "h-11 rounded-full border-2 border-gray-200 bg-gray-50/50",
+                  "focus:outline-none focus:border-primary-500 focus:bg-white",
+                  "transition-all duration-200",
+                  search ? "pr-24" : "pr-28"
+                )}
+                aria-label="Search products"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  aria-label="Clear search"
+                  className="absolute top-1/2 -translate-y-1/2 right-[88px] p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                type="submit"
+                className="absolute top-1/2 -translate-y-1/2 right-1.5 h-8 px-4 rounded-full bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 active:scale-95 transition-all shadow-sm"
               >
                 Search
-              </Button>
-            </div>
+              </button>
+            </form>
           </div>
         </section>
 

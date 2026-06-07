@@ -49,6 +49,9 @@ nul
 # Uploads (avatars, product images)
 uploads/
 
+# Bulk seed/product images (too large for git; re-run scripts to populate)
+apps/web/public/images/
+
 # Internal review notes (not for public distribution)
 REVIEW.md
 
