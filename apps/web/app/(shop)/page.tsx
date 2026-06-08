@@ -25,7 +25,6 @@ export default function HomePage() {
   const [suggestionsLoaded, setSuggestionsLoaded] = useState(false);
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
   const [recentlyViewedLoaded, setRecentlyViewedLoaded] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<any | null>(null);
   const syncWithServer = useCartStore((state) => state.syncWithServer);
 
@@ -34,19 +33,15 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    setIsLoggedIn(!!token);
     fetchCategories();
     fetchPopularCategories();
     fetchTrendingProducts();
   }, []);
 
   useEffect(() => {
-    if (isLoggedIn) {
-      fetchSuggestions();
-      fetchRecentlyViewed();
-    }
-  }, [isLoggedIn]);
+    fetchSuggestions();
+    fetchRecentlyViewed();
+  }, []);
 
   const fetchTrendingProducts = async () => {
     try {
@@ -108,7 +103,6 @@ export default function HomePage() {
 
     if (!q) return;
     if (typeof window === "undefined") return;
-    if (!localStorage.getItem("accessToken")) return;
     api.post("/suggestions/track-search", { query: q, resultsCount: 0 }).catch(() => {});
   };
 

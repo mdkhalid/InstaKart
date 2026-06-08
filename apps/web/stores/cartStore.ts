@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import api from "@/lib/api";
+import api, { trackEvent } from "@/lib/api";
 
 interface CartItem {
   productId: string;
@@ -85,8 +85,13 @@ export const useCartStore = create<CartState>()(
         }
       },
 
-      removeItem: (productId) =>
-        set({ items: get().items.filter((i) => i.productId !== productId) }),
+      removeItem: (productId) => {
+        const item = get().items.find((i) => i.productId === productId);
+        if (item) {
+          trackEvent("remove_from_cart", productId, { name: item.name });
+        }
+        set({ items: get().items.filter((i) => i.productId !== productId) });
+      },
 
       updateQty: (productId, qty) =>
         qty <= 0
@@ -116,9 +121,32 @@ export const useCartStore = create<CartState>()(
       syncWithServer: async () => {
         try {
           const { data } = await api.get("/cart");
-          if (data.data?.items) {
+          const serverItems = data.data?.items || [];
+          const localItems = get().items;
+
+          if (serverItems.length === 0 && localItems.length > 0) {
+            // Server cart is empty but user has local items (e.g. just logged in)
+            // Upload local cart to server first
+            await get().syncToServer();
+            // Now fetch the synced cart from server
+            const { data: synced } = await api.get("/cart");
+            if (synced.data?.items) {
+              set({
+                items: synced.data.items.map((item: any) => ({
+                  productId: item.productId,
+                  name: item.product?.name || "",
+                  price: item.price,
+                  quantity: item.quantity,
+                  imageUrl: item.product?.imageUrl || null,
+                  stock: item.product?.stock,
+                  slug: item.product?.slug,
+                })),
+              });
+            }
+          } else if (serverItems.length > 0) {
+            // Server has items — use server cart (authoritative)
             set({
-              items: data.data.items.map((item: any) => ({
+              items: serverItems.map((item: any) => ({
                 productId: item.productId,
                 name: item.product?.name || "",
                 price: item.price,
@@ -129,6 +157,7 @@ export const useCartStore = create<CartState>()(
               })),
             });
           }
+          // If both empty, do nothing
         } catch {
           // Not logged in or server unavailable - use local cart
         }

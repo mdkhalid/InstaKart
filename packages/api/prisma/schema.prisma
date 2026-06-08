@@ -84,6 +84,8 @@ model User {
   reviews          Review[]
   searchActivity   SearchActivity[]
   productViews     ProductView[]
+  trackingEvents   TrackingEvent[]
+  visitors         Visitor[]
   refreshTokens    RefreshToken[]
   passwordResets   PasswordReset[]
   issuesReported   OrderIssue[] @relation("IssueReporter")
@@ -183,6 +185,7 @@ model Product {
   wishlistItems WishlistItem[]
   reviews       Review[]
   productViews  ProductView[]
+  trackingEvents TrackingEvent[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -347,27 +350,70 @@ model Coupon {
   createdAt      DateTime @default(now())
 }
 
+model Visitor {
+  id          String   @id @default(cuid())
+  visitorId   String   @unique
+  sessionId   String?
+  userAgent   String?
+  ipHash      String?
+  mergedAt    DateTime? // set when merged into a User
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  searchActivity SearchActivity[]
+  productViews   ProductView[]
+  trackingEvents TrackingEvent[]
+
+  createdAt  DateTime @default(now())
+
+  @@index([visitorId])
+  @@index([userId])
+}
+
 model SearchActivity {
   id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  visitorId    String?
+  visitor      Visitor? @relation(fields: [visitorId], references: [id], onDelete: SetNull)
   query        String
   resultsCount Int      @default(0)
   createdAt    DateTime @default(now())
 
   @@index([userId, createdAt])
+  @@index([visitorId, createdAt])
 }
 
 model ProductView {
   id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  visitorId String?
+  visitor   Visitor? @relation(fields: [visitorId], references: [id], onDelete: SetNull)
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
   @@index([userId, productId])
+  @@index([visitorId, createdAt])
+}
+
+model TrackingEvent {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  visitorId  String?
+  visitor    Visitor? @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+  eventType  String   // product_click, add_to_cart, remove_from_cart, checkout_start, checkout_complete
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([visitorId, createdAt])
+  @@index([eventType, createdAt])
 }
 
 model OrderIssue {

@@ -32,6 +32,8 @@ export const useAuthStore = create<AuthState>()(
           const token = data.data.accessToken;
           set({ user: userData, accessToken: token, isLoading: false });
           localStorage.setItem("accessToken", token);
+          // Merge anonymous visitor data into this user account
+          api.post("/suggestions/merge").catch(() => {});
         } catch (error: any) {
           set({ isLoading: false });
           throw new Error(error.response?.data?.message || "Login failed");
@@ -46,6 +48,8 @@ export const useAuthStore = create<AuthState>()(
           const token = data.data.accessToken;
           set({ user: userData, accessToken: token, isLoading: false });
           localStorage.setItem("accessToken", token);
+          // Merge anonymous visitor data into this new account
+          api.post("/suggestions/merge").catch(() => {});
         } catch (error: any) {
           set({ isLoading: false });
           throw new Error(error.response?.data?.message || "Registration failed");

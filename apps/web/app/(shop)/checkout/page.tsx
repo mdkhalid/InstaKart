@@ -11,8 +11,9 @@ import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/stores/cartStore";
 import { useWishlistStore } from "@/stores/wishlistStore";
 import { useAuthStore } from "@/stores/authStore";
-import api from "@/lib/api";
+import api, { trackEvent } from "@/lib/api";
 import toast from "react-hot-toast";
+import { LoginModal } from "@/components/auth/LoginModal";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -30,10 +31,11 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [orderStep, setOrderStep] = useState<'syncing' | 'placing' | 'completed' | null>(null);
   const [stockValidated, setStockValidated] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
     if (!user) {
-      router.push("/login");
+      setShowLoginModal(true);
       return;
     }
     if (items.length === 0) {
@@ -41,6 +43,8 @@ export default function CheckoutPage() {
       return;
     }
     fetchAddresses();
+    // Track checkout start
+    trackEvent("checkout_start", undefined, { itemCount: items.length, subtotal: subtotal() });
     // Validate stock freshness before showing checkout
     validateStock().then((issues) => {
       if (issues.length > 0) {
@@ -97,6 +101,7 @@ export default function CheckoutPage() {
 
       // Step 3: Completed
       setOrderStep('completed');
+      trackEvent("checkout_complete", undefined, { itemCount: items.length, total: grandTotal, paymentMethod });
       toast.success("Order placed successfully!");
       clearCart();
       // Refresh wishlist so the UI stops showing items the user just bought
@@ -520,6 +525,14 @@ export default function CheckoutPage() {
         </div>
       </main>
       <Footer />
+      <LoginModal
+        open={showLoginModal}
+        onClose={() => {
+          setShowLoginModal(false);
+          // If user just logged in, the useEffect will re-run and fetch addresses
+        }}
+        context="Login to complete your order"
+      />
     </>
   );
 }

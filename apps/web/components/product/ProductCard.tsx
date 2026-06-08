@@ -6,6 +6,7 @@ import { ShoppingCart, Heart, Eye, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice, formatQuantity, cn } from "@/lib/utils";
+import { trackEvent } from "@/lib/api";
 import { useCart } from "@/hooks/useCart";
 import { useWishlistStore } from "@/stores/wishlistStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -103,6 +104,7 @@ export function ProductCard({
       return;
     }
     addItem(product);
+    trackEvent("add_to_cart", product.id, { name: product.name, price: product.salePrice || product.price });
     toast.success(`${product.name} added to cart`);
   };
 
@@ -113,6 +115,7 @@ export function ProductCard({
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
+    trackEvent("product_click", product.id, { name: product.name, variant });
     if (onQuickView) {
       e.preventDefault();
       onQuickView(product);
@@ -153,10 +156,10 @@ export function ProductCard({
     ? "text-xs text-gray-500 mb-3 line-clamp-1"
     : "text-xs text-gray-500 mt-1 line-clamp-1";
   const buttonClass = isGrid
-    ? "w-full mt-2 h-9 text-sm font-medium"
+    ? "w-full mt-auto h-9 text-sm font-medium"
     : isCompact
-    ? "w-full mt-2 h-8 text-xs font-medium"
-    : "w-full mt-2 h-9 text-sm font-medium";
+    ? "w-full mt-auto h-8 text-xs font-medium"
+    : "w-full mt-auto h-9 text-sm font-medium";
 
   const imageEl = isGrid ? (
     <Image
@@ -321,7 +324,7 @@ export function ProductCard({
         <div className={cardClass}>
           <Link
             href={`/products/${product.slug}`}
-            className="group block"
+            className="group block flex-1"
             onClick={handleCardClick}
           >
             <div className={imageAreaClass}>
@@ -357,7 +360,7 @@ export function ProductCard({
   return (
     <div className={outerClass}>
       <div className={cardClass}>
-        <Link href={`/products/${product.slug}`} className="group block">
+        <Link href={`/products/${product.slug}`} className="group block flex-1">
           <div className={imageAreaClass}>
             {imageEl}
             {discountBadge}
