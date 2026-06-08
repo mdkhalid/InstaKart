@@ -222,10 +222,12 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
 
     const event = socketEvents[status];
     if (event) {
+      const agentName = process.env.DEFAULT_DELIVERY_AGENT_NAME || "Delivery Agent";
+      const agentPhone = process.env.DEFAULT_DELIVERY_AGENT_PHONE || "+91-XXXXXXXXXX";
       emitToUser(order.user.id, event, {
         orderId: id,
         estimatedDelivery: order.estimatedDelivery,
-        ...(status === "OUT_FOR_DELIVERY" ? { agentName: "Delivery Agent", agentPhone: "+91XXXXXXXXXX" } : {}),
+        ...(status === "OUT_FOR_DELIVERY" ? { agentName, agentPhone } : {}),
         ...(status === "DELIVERED" ? { deliveredAt: new Date() } : {}),
         ...(status === "CANCELLED" ? { reason: note } : {}),
       });
