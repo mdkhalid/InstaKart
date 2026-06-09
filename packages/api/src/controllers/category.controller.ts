@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { withCache, clearCache } from "../utils/cache";
+import { logger } from "../utils/logger";
 
 export const listCategories = async (_req: Request, res: Response) => {
   try {
@@ -17,7 +18,7 @@ export const listCategories = async (_req: Request, res: Response) => {
     }, 120_000); // Cache for 2 minutes
     return successResponse(res, categories);
   } catch (error) {
-    console.error("List categories error:", error);
+    logger.error("List categories error:", error);
     return errorResponse(res, "Failed to list categories", 500);
   }
 };
@@ -51,7 +52,7 @@ export const getPopularCategories = async (_req: Request, res: Response) => {
 
     return successResponse(res, categoriesToReturn);
   } catch (error) {
-    console.error("Get popular categories error:", error);
+    logger.error("Get popular categories error:", error);
     return errorResponse(res, "Failed to get popular categories", 500);
   }
 };
@@ -70,7 +71,7 @@ export const createCategory = async (req: Request, res: Response) => {
     return successResponse(res, category, "Category created", 201);
   } catch (error: any) {
     if (error.code === "P2002") return errorResponse(res, "Category with this name already exists", 409);
-    console.error("Create category error:", error);
+    logger.error("Create category error:", error);
     return errorResponse(res, "Failed to create category", 500);
   }
 };
@@ -93,7 +94,7 @@ export const updateCategory = async (req: Request, res: Response) => {
 
     return successResponse(res, category, "Category updated");
   } catch (error) {
-    console.error("Update category error:", error);
+    logger.error("Update category error:", error);
     return errorResponse(res, "Failed to update category", 500);
   }
 };
@@ -108,7 +109,7 @@ export const deleteCategory = async (req: Request, res: Response) => {
 
     return successResponse(res, null, "Category deleted");
   } catch (error) {
-    console.error("Delete category error:", error);
+    logger.error("Delete category error:", error);
     return errorResponse(res, "Failed to delete category", 500);
   }
 };

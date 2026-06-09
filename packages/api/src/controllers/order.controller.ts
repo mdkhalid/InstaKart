@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { emitToAdmin, emitToUser } from "../services/socket.service";
 import { sendOrderConfirmationEmail } from "../services/email.service";
+import { logger } from "../utils/logger";
 
 const FREE_DELIVERY_THRESHOLD = Number(process.env.FREE_DELIVERY_THRESHOLD) || 499;
 const DELIVERY_FEE = Number(process.env.DELIVERY_FEE) || 40;
@@ -191,7 +192,7 @@ export const createOrder = async (req: Request, res: Response) => {
       total: Number(order.total),
     }, "Order placed successfully", 201);
   } catch (error) {
-    console.error("Create order error:", error);
+    logger.error("Create order error:", error);
     return errorResponse(res, "Failed to create order", 500);
   }
 };
@@ -231,7 +232,7 @@ export const getMyOrders = async (req: Request, res: Response) => {
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    console.error("Get my orders error:", error);
+    logger.error("Get my orders error:", error);
     return errorResponse(res, "Failed to get orders", 500);
   }
 };
@@ -261,7 +262,7 @@ export const getOrder = async (req: Request, res: Response) => {
       items: order.items.map((i) => ({ ...i, unitPrice: Number(i.unitPrice), totalPrice: Number(i.totalPrice) })),
     });
   } catch (error) {
-    console.error("Get order error:", error);
+    logger.error("Get order error:", error);
     return errorResponse(res, "Failed to get order", 500);
   }
 };
@@ -362,7 +363,7 @@ export const getReorderPreview = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Get reorder preview error:", error);
+    logger.error("Get reorder preview error:", error);
     return errorResponse(res, "Failed to build reorder preview", 500);
   }
 };
@@ -410,7 +411,7 @@ export const cancelOrder = async (req: Request, res: Response) => {
 
     return successResponse(res, updatedOrder, "Order cancelled");
   } catch (error) {
-    console.error("Cancel order error:", error);
+    logger.error("Cancel order error:", error);
     return errorResponse(res, "Failed to cancel order", 500);
   }
 };

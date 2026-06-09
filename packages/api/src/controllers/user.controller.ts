@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { uploadImage } from "../services/upload.service";
+import { logger } from "../utils/logger";
 
 export const getProfile = async (req: Request, res: Response) => {
   try {
@@ -17,7 +18,7 @@ export const getProfile = async (req: Request, res: Response) => {
     if (!user) return errorResponse(res, "User not found", 404);
     return successResponse(res, user);
   } catch (error) {
-    console.error("Get profile error:", error);
+    logger.error("Get profile error:", error);
     return errorResponse(res, "Failed to get profile", 500);
   }
 };
@@ -41,7 +42,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     });
     return successResponse(res, user, "Profile updated");
   } catch (error) {
-    console.error("Update profile error:", error);
+    logger.error("Update profile error:", error);
     return errorResponse(res, "Failed to update profile", 500);
   }
 };
@@ -68,7 +69,7 @@ export const changePassword = async (req: Request, res: Response) => {
 
     return successResponse(res, null, "Password changed successfully");
   } catch (error) {
-    console.error("Change password error:", error);
+    logger.error("Change password error:", error);
     return errorResponse(res, "Failed to change password", 500);
   }
 };
@@ -87,7 +88,7 @@ export const uploadAvatar = async (req: Request, res: Response) => {
 
     return successResponse(res, user, "Avatar uploaded");
   } catch (error) {
-    console.error("Upload avatar error:", error);
+    logger.error("Upload avatar error:", error);
     return errorResponse(res, "Failed to upload avatar", 500);
   }
 };
@@ -101,7 +102,7 @@ export const getAddresses = async (req: Request, res: Response) => {
     });
     return successResponse(res, addresses);
   } catch (error) {
-    console.error("Get addresses error:", error);
+    logger.error("Get addresses error:", error);
     return errorResponse(res, "Failed to get addresses", 500);
   }
 };
@@ -142,7 +143,7 @@ export const addAddress = async (req: Request, res: Response) => {
 
     return successResponse(res, address, "Address added", 201);
   } catch (error) {
-    console.error("Add address error:", error);
+    logger.error("Add address error:", error);
     return errorResponse(res, "Failed to add address", 500);
   }
 };
@@ -178,7 +179,7 @@ export const updateAddress = async (req: Request, res: Response) => {
 
     return successResponse(res, updated, "Address updated");
   } catch (error) {
-    console.error("Update address error:", error);
+    logger.error("Update address error:", error);
     return errorResponse(res, "Failed to update address", 500);
   }
 };
@@ -195,7 +196,7 @@ export const deleteAddress = async (req: Request, res: Response) => {
     await prisma.address.delete({ where: { id } });
     return successResponse(res, null, "Address deleted");
   } catch (error) {
-    console.error("Delete address error:", error);
+    logger.error("Delete address error:", error);
     return errorResponse(res, "Failed to delete address", 500);
   }
 };
@@ -226,7 +227,7 @@ export const setDefaultAddress = async (req: Request, res: Response) => {
 
     return successResponse(res, null, "Default address updated");
   } catch (error) {
-    console.error("Set default address error:", error);
+    logger.error("Set default address error:", error);
     return errorResponse(res, "Failed to set default address", 500);
   }
 };

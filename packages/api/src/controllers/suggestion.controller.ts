@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { withCache, clearCache } from "../utils/cache";
+import { logger } from "../utils/logger";
 
 /**
  * Resolve either userId or visitorId from the request.
@@ -176,7 +177,7 @@ export const mergeVisitorData = async (req: Request, res: Response) => {
 
     return successResponse(res, { merged: true });
   } catch (error) {
-    console.error("Merge visitor data error:", error);
+    logger.error("Merge visitor data error:", error);
     return successResponse(res, { merged: false }); // never fail
   }
 };
@@ -446,7 +447,7 @@ export const getSuggestions = async (req: Request, res: Response) => {
 
     return successResponse(res, enriched);
   } catch (error) {
-    console.error("Get suggestions error:", error);
+    logger.error("Get suggestions error:", error);
     const trending = await getTrendingFallback();
     return successResponse(res, trending);
   }
@@ -553,7 +554,7 @@ export const getRecentlyViewed = async (req: Request, res: Response) => {
 
     return successResponse(res, enriched);
   } catch (error) {
-    console.error("Get recently viewed error:", error);
+    logger.error("Get recently viewed error:", error);
     return successResponse(res, []);
   }
 };

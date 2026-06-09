@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { uploadImage } from "../services/upload.service";
+import { logger } from "../utils/logger";
 
 // 10 minutes post-delivery window for instant-shopping apps
 const ISSUE_WINDOW_MINUTES = Number(process.env.ISSUE_WINDOW_MINUTES) || 10;
@@ -120,10 +121,10 @@ export const createOrderIssue = async (req: Request, res: Response) => {
       201
     );
   } catch (error: any) {
-    console.error("Create order issue error:", error);
-    console.error("Stack:", error?.stack);
-    console.error("Code:", error?.code);
-    console.error("Meta:", error?.meta);
+    logger.error("Create order issue error:", error);
+    logger.error("Stack:", error?.stack);
+    logger.error("Code:", error?.code);
+    logger.error("Meta:", error?.meta);
     return errorResponse(
       res,
       `Failed to report issue: ${error?.message || "Unknown error"}`,
@@ -179,7 +180,7 @@ export const getOrderIssues = async (req: Request, res: Response) => {
       windowMinutes: ISSUE_WINDOW_MINUTES,
     });
   } catch (error) {
-    console.error("Get order issues error:", error);
+    logger.error("Get order issues error:", error);
     return errorResponse(res, "Failed to fetch issues", 500);
   }
 };
@@ -224,7 +225,7 @@ export const getAllIssues = async (req: Request, res: Response) => {
       pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
     });
   } catch (error) {
-    console.error("Get all issues error:", error);
+    logger.error("Get all issues error:", error);
     return errorResponse(res, "Failed to fetch issues", 500);
   }
 };
@@ -249,7 +250,7 @@ export const getIssueDetail = async (req: Request, res: Response) => {
     if (!issue) return errorResponse(res, "Issue not found", 404);
     return successResponse(res, issue);
   } catch (error) {
-    console.error("Get issue detail error:", error);
+    logger.error("Get issue detail error:", error);
     return errorResponse(res, "Failed to fetch issue", 500);
   }
 };
@@ -325,9 +326,9 @@ export const resolveIssue = async (req: Request, res: Response) => {
       `Issue approved. ₹${finalAmount} refund initiated.`
     );
   } catch (error: any) {
-    console.error("Resolve issue error:", error);
-    console.error("Stack:", error?.stack);
-    console.error("Code:", error?.code);
+    logger.error("Resolve issue error:", error);
+    logger.error("Stack:", error?.stack);
+    logger.error("Code:", error?.code);
     return errorResponse(
       res,
       `Failed to resolve issue: ${error?.message || "Unknown error"}`,
@@ -350,7 +351,7 @@ export const uploadIssuePhotos = async (req: Request, res: Response) => {
     );
     return successResponse(res, { urls });
   } catch (error) {
-    console.error("Upload issue photos error:", error);
+    logger.error("Upload issue photos error:", error);
     return errorResponse(res, "Failed to upload photos", 500);
   }
 };

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { emitToAdmin } from "../services/socket.service";
+import { logger } from "../utils/logger";
 
 export const getCart = async (req: Request, res: Response) => {
   try {
@@ -58,7 +59,7 @@ export const getCart = async (req: Request, res: Response) => {
       itemCount: enrichedItems.reduce((sum, item) => sum + item.quantity, 0),
     });
   } catch (error) {
-    console.error("Get cart error:", error);
+    logger.error("Get cart error:", error);
     return errorResponse(res, "Failed to get cart", 500);
   }
 };
@@ -107,7 +108,7 @@ export const addItem = async (req: Request, res: Response) => {
     const updatedCart = await getCartData(cart.id);
     return successResponse(res, updatedCart, "Item added to cart");
   } catch (error) {
-    console.error("Add to cart error:", error);
+    logger.error("Add to cart error:", error);
     return errorResponse(res, "Failed to add item", 500);
   }
 };
@@ -143,7 +144,7 @@ export const updateItem = async (req: Request, res: Response) => {
     const updatedCart = await getCartData(cart.id);
     return successResponse(res, updatedCart, "Cart updated");
   } catch (error) {
-    console.error("Update cart item error:", error);
+    logger.error("Update cart item error:", error);
     return errorResponse(res, "Failed to update item", 500);
   }
 };
@@ -162,7 +163,7 @@ export const removeItem = async (req: Request, res: Response) => {
     const updatedCart = await getCartData(cart.id);
     return successResponse(res, updatedCart, "Item removed from cart");
   } catch (error) {
-    console.error("Remove from cart error:", error);
+    logger.error("Remove from cart error:", error);
     return errorResponse(res, "Failed to remove item", 500);
   }
 };
@@ -175,7 +176,7 @@ export const clearCart = async (req: Request, res: Response) => {
     }
     return successResponse(res, null, "Cart cleared");
   } catch (error) {
-    console.error("Clear cart error:", error);
+    logger.error("Clear cart error:", error);
     return errorResponse(res, "Failed to clear cart", 500);
   }
 };
@@ -239,7 +240,7 @@ export const syncCart = async (req: Request, res: Response) => {
     const updatedCart = await getCartData(cart.id);
     return successResponse(res, updatedCart, "Cart synced");
   } catch (error) {
-    console.error("Sync cart error:", error);
+    logger.error("Sync cart error:", error);
     return errorResponse(res, "Failed to sync cart", 500);
   }
 };
@@ -261,7 +262,7 @@ export const applyCoupon = async (req: Request, res: Response) => {
 
     return successResponse(res, coupon, "Coupon applied");
   } catch (error) {
-    console.error("Apply coupon error:", error);
+    logger.error("Apply coupon error:", error);
     return errorResponse(res, "Failed to apply coupon", 500);
   }
 };

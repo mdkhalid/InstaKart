@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { emitToUser } from "../services/socket.service";
 import { uploadImage } from "../services/upload.service";
+import { logger } from "../utils/logger";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   PENDING: ["CONFIRMED", "CANCELLED"],
@@ -112,7 +113,7 @@ export const getDashboard = async (_req: Request, res: Response) => {
       revenueChart,
     });
   } catch (error) {
-    console.error("Dashboard error:", error);
+    logger.error("Dashboard error:", error);
     return errorResponse(res, "Failed to get dashboard data", 500);
   }
 };
@@ -164,7 +165,7 @@ export const getAllOrders = async (req: Request, res: Response) => {
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    console.error("Get all orders error:", error);
+    logger.error("Get all orders error:", error);
     return errorResponse(res, "Failed to get orders", 500);
   }
 };
@@ -239,7 +240,7 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
       total: Number(updatedOrder.total),
     }, "Order status updated");
   } catch (error) {
-    console.error("Update order status error:", error);
+    logger.error("Update order status error:", error);
     return errorResponse(res, "Failed to update order status", 500);
   }
 };
@@ -271,7 +272,7 @@ export const getOrderDetail = async (req: Request, res: Response) => {
       items: order.items.map((i) => ({ ...i, unitPrice: Number(i.unitPrice), totalPrice: Number(i.totalPrice) })),
     });
   } catch (error) {
-    console.error("Get order detail error:", error);
+    logger.error("Get order detail error:", error);
     return errorResponse(res, "Failed to get order", 500);
   }
 };
@@ -315,7 +316,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    console.error("Get all users error:", error);
+    logger.error("Get all users error:", error);
     return errorResponse(res, "Failed to get users", 500);
   }
 };
@@ -342,7 +343,7 @@ export const getUserDetail = async (req: Request, res: Response) => {
       orders: user.orders.map((o) => ({ ...o, total: Number(o.total) })),
     });
   } catch (error) {
-    console.error("Get user detail error:", error);
+    logger.error("Get user detail error:", error);
     return errorResponse(res, "Failed to get user details", 500);
   }
 };
@@ -359,7 +360,7 @@ export const changeUserRole = async (req: Request, res: Response) => {
     await prisma.user.update({ where: { id }, data: { role } });
     return successResponse(res, null, "User role updated");
   } catch (error) {
-    console.error("Change user role error:", error);
+    logger.error("Change user role error:", error);
     return errorResponse(res, "Failed to update user role", 500);
   }
 };
@@ -378,7 +379,7 @@ export const toggleUserStatus = async (req: Request, res: Response) => {
 
     return successResponse(res, null, `User ${user.isActive ? "deactivated" : "activated"}`);
   } catch (error) {
-    console.error("Toggle user status error:", error);
+    logger.error("Toggle user status error:", error);
     return errorResponse(res, "Failed to toggle user status", 500);
   }
 };
@@ -392,7 +393,7 @@ export const deleteUser = async (req: Request, res: Response) => {
     });
     return successResponse(res, null, "User deactivated");
   } catch (error) {
-    console.error("Delete user error:", error);
+    logger.error("Delete user error:", error);
     return errorResponse(res, "Failed to deactivate user", 500);
   }
 };
@@ -428,7 +429,7 @@ export const updateUser = async (req: Request, res: Response) => {
 
     return successResponse(res, updated, "User updated");
   } catch (error) {
-    console.error("Update user error:", error);
+    logger.error("Update user error:", error);
     return errorResponse(res, "Failed to update user", 500);
   }
 };
@@ -450,7 +451,7 @@ export const getCoupons = async (_req: Request, res: Response) => {
 
     return successResponse(res, enriched);
   } catch (error) {
-    console.error("Get coupons error:", error);
+    logger.error("Get coupons error:", error);
     return errorResponse(res, "Failed to get coupons", 500);
   }
 };
@@ -485,7 +486,7 @@ export const createCoupon = async (req: Request, res: Response) => {
       maxDiscount: coupon.maxDiscount ? Number(coupon.maxDiscount) : null,
     }, "Coupon created", 201);
   } catch (error) {
-    console.error("Create coupon error:", error);
+    logger.error("Create coupon error:", error);
     return errorResponse(res, "Failed to create coupon", 500);
   }
 };
@@ -520,7 +521,7 @@ export const updateCoupon = async (req: Request, res: Response) => {
       maxDiscount: coupon.maxDiscount ? Number(coupon.maxDiscount) : null,
     }, "Coupon updated");
   } catch (error) {
-    console.error("Update coupon error:", error);
+    logger.error("Update coupon error:", error);
     return errorResponse(res, "Failed to update coupon", 500);
   }
 };
@@ -535,7 +536,7 @@ export const deleteCoupon = async (req: Request, res: Response) => {
     await prisma.coupon.delete({ where: { id } });
     return successResponse(res, null, "Coupon deleted");
   } catch (error) {
-    console.error("Delete coupon error:", error);
+    logger.error("Delete coupon error:", error);
     return errorResponse(res, "Failed to delete coupon", 500);
   }
 };
@@ -559,7 +560,7 @@ export const uploadUserAvatar = async (req: Request, res: Response) => {
 
     return successResponse(res, updated, "Avatar uploaded");
   } catch (error) {
-    console.error("Upload user avatar error:", error);
+    logger.error("Upload user avatar error:", error);
     return errorResponse(res, "Failed to upload avatar", 500);
   }
 };
@@ -667,7 +668,7 @@ export const getAnalytics = async (_req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Analytics error:", error);
+    logger.error("Analytics error:", error);
     return errorResponse(res, "Failed to get analytics", 500);
   }
 };
@@ -699,7 +700,7 @@ export const resetUserPassword = async (req: Request, res: Response) => {
 
     return successResponse(res, null, "Password reset successful");
   } catch (error) {
-    console.error("Reset user password error:", error);
+    logger.error("Reset user password error:", error);
     return errorResponse(res, "Failed to reset password", 500);
   }
 };
@@ -750,7 +751,7 @@ export const adminListProducts = async (req: Request, res: Response) => {
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    console.error("Admin list products error:", error);
+    logger.error("Admin list products error:", error);
     return errorResponse(res, "Failed to list products", 500);
   }
 };
@@ -775,7 +776,7 @@ export const adminGetProduct = async (req: Request, res: Response) => {
       costPrice: product.costPrice ? Number(product.costPrice) : null,
     });
   } catch (error) {
-    console.error("Admin get product error:", error);
+    logger.error("Admin get product error:", error);
     return errorResponse(res, "Failed to get product", 500);
   }
 };

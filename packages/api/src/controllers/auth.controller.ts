@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
 import { successResponse, errorResponse } from "../utils/response";
 import { sendWelcomeEmail, sendPasswordResetEmail } from "../services/email.service";
+import { logger } from "../utils/logger";
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -48,7 +49,7 @@ export const register = async (req: Request, res: Response) => {
 
     return successResponse(res, { user, accessToken }, "Registration successful", 201);
   } catch (error) {
-    console.error("Register error:", error);
+    logger.error("Register error:", error);
     return errorResponse(res, "Registration failed", 500);
   }
 };
@@ -92,7 +93,7 @@ export const login = async (req: Request, res: Response) => {
     const { passwordHash: _, ...userWithoutPassword } = user;
     return successResponse(res, { user: userWithoutPassword, accessToken }, "Login successful");
   } catch (error) {
-    console.error("Login error:", error);
+    logger.error("Login error:", error);
     return errorResponse(res, "Login failed", 500);
   }
 };
@@ -143,7 +144,7 @@ export const refresh = async (req: Request, res: Response) => {
 
     return successResponse(res, { accessToken: newAccessToken });
   } catch (error) {
-    console.error("Refresh error:", error);
+    logger.error("Refresh error:", error);
     return errorResponse(res, "Token refresh failed", 500);
   }
 };
@@ -157,7 +158,7 @@ export const logout = async (req: Request, res: Response) => {
     res.clearCookie("refreshToken");
     return successResponse(res, null, "Logged out successfully");
   } catch (error) {
-    console.error("Logout error:", error);
+    logger.error("Logout error:", error);
     return errorResponse(res, "Logout failed", 500);
   }
 };
@@ -186,7 +187,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     return successResponse(res, null, "If the email exists, a reset link has been sent");
   } catch (error) {
-    console.error("Forgot password error:", error);
+    logger.error("Forgot password error:", error);
     return errorResponse(res, "Failed to process request", 500);
   }
 };
@@ -223,7 +224,7 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     return successResponse(res, null, "Password reset successful");
   } catch (error) {
-    console.error("Reset password error:", error);
+    logger.error("Reset password error:", error);
     return errorResponse(res, "Password reset failed", 500);
   }
 };

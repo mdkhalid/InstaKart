@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { uploadImage, deleteImage } from "../services/upload.service";
 import { withCache, clearCache } from "../utils/cache";
+import { logger } from "../utils/logger";
 
 // Public routes
 export const checkStock = async (req: Request, res: Response) => {
@@ -24,7 +25,7 @@ export const checkStock = async (req: Request, res: Response) => {
 
     return successResponse(res, stockMap);
   } catch (error) {
-    console.error("Check stock error:", error);
+    logger.error("Check stock error:", error);
     return errorResponse(res, "Failed to check stock", 500);
   }
 };
@@ -106,7 +107,7 @@ export const listProducts = async (req: Request, res: Response) => {
 
     return successResponse(res, enriched);
   } catch (error) {
-    console.error("List products error:", error);
+    logger.error("List products error:", error);
     return errorResponse(res, "Failed to list products", 500);
   }
 };
@@ -172,7 +173,7 @@ export const getTrendingProducts = async (req: Request, res: Response) => {
 
     return successResponse(res, enriched);
   } catch (error) {
-    console.error("Get trending products error:", error);
+    logger.error("Get trending products error:", error);
     return errorResponse(res, "Failed to get trending products", 500);
   }
 };
@@ -210,7 +211,7 @@ export const getFeatured = async (req: Request, res: Response) => {
 
     return successResponse(res, enriched);
   } catch (error) {
-    console.error("Get featured error:", error);
+    logger.error("Get featured error:", error);
     return errorResponse(res, "Failed to get featured products", 500);
   }
 };
@@ -258,7 +259,7 @@ export const searchProducts = async (req: Request, res: Response) => {
 
     return successResponse(res, enriched);
   } catch (error) {
-    console.error("Search products error:", error);
+    logger.error("Search products error:", error);
     return errorResponse(res, "Failed to search products", 500);
   }
 };
@@ -300,7 +301,7 @@ export const getProduct = async (req: Request, res: Response) => {
 
     return successResponse(res, enriched);
   } catch (error) {
-    console.error("Get product error:", error);
+    logger.error("Get product error:", error);
     return errorResponse(res, "Failed to get product", 500);
   }
 };
@@ -336,7 +337,7 @@ export const createProduct = async (req: Request, res: Response) => {
 
     return successResponse(res, { ...product, price: Number(product.price) }, "Product created", 201);
   } catch (error) {
-    console.error("Create product error:", error);
+    logger.error("Create product error:", error);
     return errorResponse(res, "Failed to create product", 500);
   }
 };
@@ -369,7 +370,7 @@ export const updateProduct = async (req: Request, res: Response) => {
 
     return successResponse(res, product, "Product updated");
   } catch (error) {
-    console.error("Update product error:", error);
+    logger.error("Update product error:", error);
     return errorResponse(res, "Failed to update product", 500);
   }
 };
@@ -385,7 +386,7 @@ export const deleteProduct = async (req: Request, res: Response) => {
     clearCache("products:");
     return successResponse(res, null, "Product deactivated");
   } catch (error) {
-    console.error("Delete product error:", error);
+    logger.error("Delete product error:", error);
     return errorResponse(res, "Failed to delete product", 500);
   }
 };
@@ -423,7 +424,7 @@ export const uploadProductImages = async (req: Request, res: Response) => {
 
     return successResponse(res, product, "Images uploaded");
   } catch (error) {
-    console.error("Upload images error:", error);
+    logger.error("Upload images error:", error);
     return errorResponse(res, "Failed to upload images", 500);
   }
 };
@@ -434,7 +435,7 @@ export const deleteProductImage = async (req: Request, res: Response) => {
     await prisma.productImage.delete({ where: { id: imageId } });
     return successResponse(res, null, "Image deleted");
   } catch (error) {
-    console.error("Delete image error:", error);
+    logger.error("Delete image error:", error);
     return errorResponse(res, "Failed to delete image", 500);
   }
 };

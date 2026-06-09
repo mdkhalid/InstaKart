@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
+import { logger } from "../utils/logger";
 
 export const getWishlist = async (req: Request, res: Response) => {
   try {
@@ -53,7 +54,7 @@ export const getWishlist = async (req: Request, res: Response) => {
 
     return successResponse(res, enriched);
   } catch (error) {
-    console.error("Get wishlist error:", error);
+    logger.error("Get wishlist error:", error);
     return errorResponse(res, "Failed to get wishlist", 500);
   }
 };
@@ -96,7 +97,7 @@ export const addToWishlist = async (req: Request, res: Response) => {
 
     return successResponse(res, { id: item.id, productId }, "Added to wishlist", 201);
   } catch (error) {
-    console.error("Add to wishlist error:", error);
+    logger.error("Add to wishlist error:", error);
     return errorResponse(res, "Failed to add to wishlist", 500);
   }
 };
@@ -122,7 +123,7 @@ export const removeFromWishlist = async (req: Request, res: Response) => {
 
     return successResponse(res, null, "Removed from wishlist");
   } catch (error) {
-    console.error("Remove from wishlist error:", error);
+    logger.error("Remove from wishlist error:", error);
     return errorResponse(res, "Failed to remove from wishlist", 500);
   }
 };
@@ -156,7 +157,7 @@ export const toggleWishlist = async (req: Request, res: Response) => {
 
     return successResponse(res, { inWishlist: true }, "Added to wishlist", 201);
   } catch (error) {
-    console.error("Toggle wishlist error:", error);
+    logger.error("Toggle wishlist error:", error);
     return errorResponse(res, "Failed to toggle wishlist", 500);
   }
 };
@@ -186,7 +187,7 @@ export const checkWishlist = async (req: Request, res: Response) => {
 
     return successResponse(res, wishlistMap);
   } catch (error) {
-    console.error("Check wishlist error:", error);
+    logger.error("Check wishlist error:", error);
     return errorResponse(res, "Failed to check wishlist", 500);
   }
 };

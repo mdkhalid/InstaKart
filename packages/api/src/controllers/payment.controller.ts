@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import {
+import { logger } from "../utils/logger";
   createPaymentIntent,
   verifyPayment,
   handleRazorpayWebhook,
@@ -39,7 +40,7 @@ export const createPayment = async (req: Request, res: Response) => {
       orderId: paymentIntent.orderId,
     });
   } catch (error) {
-    console.error("Create payment error:", error);
+    logger.error("Create payment error:", error);
     return errorResponse(res, "Failed to create payment", 500);
   }
 };
@@ -65,7 +66,7 @@ export const verifyPaymentStatus = async (req: Request, res: Response) => {
 
     return successResponse(res, result, "Payment verified successfully");
   } catch (error) {
-    console.error("Verify payment error:", error);
+    logger.error("Verify payment error:", error);
     return errorResponse(res, "Failed to verify payment", 500);
   }
 };
@@ -104,7 +105,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
     return successResponse(res, result, "Webhook processed");
   } catch (error) {
-    console.error("Webhook error:", error);
+    logger.error("Webhook error:", error);
     return errorResponse(res, "Webhook processing failed", 500);
   }
 };

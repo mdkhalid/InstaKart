@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
+import { logger } from "../utils/logger";
 
 export const getProductReviews = async (req: Request, res: Response) => {
   try {
@@ -40,7 +41,7 @@ export const getProductReviews = async (req: Request, res: Response) => {
       totalReviews: total,
     });
   } catch (error) {
-    console.error("Get product reviews error:", error);
+    logger.error("Get product reviews error:", error);
     return errorResponse(res, "Failed to get reviews", 500);
   }
 };
@@ -92,7 +93,7 @@ export const createReview = async (req: Request, res: Response) => {
 
     return successResponse(res, review, "Review created", 201);
   } catch (error) {
-    console.error("Create review error:", error);
+    logger.error("Create review error:", error);
     return errorResponse(res, "Failed to create review", 500);
   }
 };
@@ -125,7 +126,7 @@ export const updateReview = async (req: Request, res: Response) => {
 
     return successResponse(res, updated, "Review updated");
   } catch (error) {
-    console.error("Update review error:", error);
+    logger.error("Update review error:", error);
     return errorResponse(res, "Failed to update review", 500);
   }
 };
@@ -142,7 +143,7 @@ export const deleteReview = async (req: Request, res: Response) => {
     await prisma.review.delete({ where: { id } });
     return successResponse(res, null, "Review deleted");
   } catch (error) {
-    console.error("Delete review error:", error);
+    logger.error("Delete review error:", error);
     return errorResponse(res, "Failed to delete review", 500);
   }
 };
