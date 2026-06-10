@@ -8,6 +8,7 @@ import {
   Navigation, Award, IndianRupee, Activity,
 } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
+import { StoreFilter } from "@/components/StoreFilter";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/utils";
 import { useConfirm } from "@/hooks/useConfirm";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -122,14 +123,17 @@ export default function DeliveryPersonDetailPage() {
   const [activity, setActivity] = useState<{ activities: DailyActivity[]; summary: ActivitySummary } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [storeId, setStoreId] = useState("");
 
   const fetchPerson = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      const personParams = storeId ? `?storeId=${storeId}` : "";
+      const activityParams = storeId ? `?days=30&storeId=${storeId}` : "?days=30";
       const [personRes, activityRes] = await Promise.all([
-        api.get(`/admin/delivery-persons/${params.id}`),
-        api.get(`/admin/delivery-persons/${params.id}/activity?days=30`),
+        api.get(`/admin/delivery-persons/${params.id}${personParams}`),
+        api.get(`/admin/delivery-persons/${params.id}/activity${activityParams}`),
       ]);
       setPerson(personRes.data.data);
       setActivity(activityRes.data.data);
@@ -142,7 +146,7 @@ export default function DeliveryPersonDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [params.id]);
+  }, [params.id, storeId]);
 
   useEffect(() => {
     if (params?.id) fetchPerson();
@@ -272,6 +276,7 @@ export default function DeliveryPersonDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <StoreFilter value={storeId} onChange={setStoreId} />
           <button
             onClick={() => router.push(`/delivery-persons/${params.id}/edit`)}
             className="inline-flex items-center px-3 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"

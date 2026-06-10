@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Save, Bike, User } from "lucide-react";
+import { StoreFilter } from "@/components/StoreFilter";
 import { useStoreStore } from "../../../../../web/stores/storeStore";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -31,6 +32,7 @@ export default function EditDeliveryPersonPage() {
   const { currentStore } = useStoreStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [storeId, setStoreId] = useState("");
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -47,12 +49,13 @@ export default function EditDeliveryPersonPage() {
 
   useEffect(() => {
     if (params?.id) fetchPerson();
-  }, [params?.id]);
+  }, [params?.id, storeId]);
 
   const fetchPerson = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get(`/admin/delivery-persons/${params.id}`);
+      const queryStr = storeId ? `?storeId=${storeId}` : "";
+      const { data } = await api.get(`/admin/delivery-persons/${params.id}${queryStr}`);
       const p = data.data;
       setForm({
         firstName: p.firstName || "",
@@ -120,7 +123,8 @@ export default function EditDeliveryPersonPage() {
         payload.monthlySalary = null;
       }
 
-      await api.put(`/admin/delivery-persons/${params.id}`, payload);
+      const queryStr = storeId ? `?storeId=${storeId}` : "";
+      await api.put(`/admin/delivery-persons/${params.id}${queryStr}`, payload);
       toast.success("Delivery person updated");
       router.push(`/delivery-persons/${params.id}`);
     } catch (err: any) {
@@ -176,6 +180,7 @@ export default function EditDeliveryPersonPage() {
             {currentStore ? `Store: ${currentStore.name}` : `Editing ${form.firstName} ${form.lastName}`}
           </p>
         </div>
+        <StoreFilter value={storeId} onChange={setStoreId} />
       </div>
 
       <form onSubmit={handleSubmit} className="max-w-2xl space-y-4">

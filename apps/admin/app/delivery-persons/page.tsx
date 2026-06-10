@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Search, Phone, Bike, Star, Clock, Filter, RefreshCw, UserCheck, UserX, Navigation, ChevronDown } from "lucide-react";
+import { StoreFilter } from "@/components/StoreFilter";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ export default function DeliveryPersonsPage() {
   const [typeFilter, setTypeFilter] = useState("");
   const [page, setPage] = useState(1);
   const [stats, setStats] = useState<any>(null);
+  const [storeId, setStoreId] = useState("");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);
@@ -77,6 +79,7 @@ export default function DeliveryPersonsPage() {
       if (search) params.set("search", search);
       if (statusFilter) params.set("status", statusFilter);
       if (typeFilter) params.set("type", typeFilter);
+      if (storeId) params.set("storeId", storeId);
 
       const { data } = await api.get(`/admin/delivery-persons?${params}`);
       setPersons(data.data?.persons || []);
@@ -86,14 +89,15 @@ export default function DeliveryPersonsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, typeFilter]);
+  }, [page, search, statusFilter, typeFilter, storeId]);
 
   const fetchStats = useCallback(async () => {
     try {
-      const { data } = await api.get("/admin/delivery-persons/stats");
+      const params = storeId ? `?storeId=${storeId}` : "";
+      const { data } = await api.get(`/admin/delivery-persons/stats${params}`);
       setStats(data.data);
     } catch {}
-  }, []);
+  }, [storeId]);
 
   useEffect(() => {
     fetchPersons();
@@ -145,6 +149,7 @@ export default function DeliveryPersonsPage() {
             <p className="text-sm text-gray-500 mt-1">Manage your delivery team</p>
           </div>
           <div className="flex items-center gap-3">
+            <StoreFilter value={storeId} onChange={(id) => { setStoreId(id); setPage(1); }} />
             <Button variant="outline" size="sm" onClick={() => { fetchPersons(); fetchStats(); }}>
               <RefreshCw className="h-4 w-4 mr-1" /> Refresh
             </Button>

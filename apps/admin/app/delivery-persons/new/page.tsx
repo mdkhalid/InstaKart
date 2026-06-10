@@ -76,6 +76,11 @@ export default function NewDeliveryPersonPage() {
         payload.monthlySalary = parseFloat(form.monthlySalary);
       }
 
+      // Pass storeId so SUPER_ADMIN users can create persons in the selected store
+      if (currentStore?.id) {
+        payload.storeId = currentStore.id;
+      }
+
       await api.post("/admin/delivery-persons", payload);
       toast.success("Delivery person added");
       router.push("/delivery-persons");
