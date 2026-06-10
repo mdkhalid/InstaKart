@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useStoreStore } from "../../../web/stores/storeStore";
-import { Plus, Search, Phone, Bike, Star, Clock, Filter, RefreshCw, UserCheck, UserX, Navigation } from "lucide-react";
+import { Plus, Search, Phone, Bike, Star, Clock, Filter, RefreshCw, UserCheck, UserX, Navigation, ChevronDown } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -55,6 +55,8 @@ const VEHICLE_ICONS: Record<string, string> = {
   WALK: "🚶",
 };
 
+const STATUS_CYCLE = ["ACTIVE", "OFF_DUTY", "INACTIVE"];
+
 export default function DeliveryPersonsPage() {
   const router = useRouter();
   const { currentStore } = useStoreStore();
@@ -100,6 +102,29 @@ export default function DeliveryPersonsPage() {
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  // Close menu on any click outside — the menu div and toggle button both call stopPropagation
+  useEffect(() => {
+    const handleClick = () => setOpenMenuId(null);
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const handleToggleStatus = async (id: string, newStatus: string) => {
+    try {
+      await api.put(`/admin/delivery-persons/${id}/status`, { status: newStatus });
+      toast.success(`Status updated to ${newStatus === "OFF_DUTY" ? "Off Duty" : newStatus.charAt(0) + newStatus.slice(1).toLowerCase()}`);
+      fetchPersons();
+      fetchStats();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to update status";
+      toast.error(msg);
+    } finally {
+      setOpenMenuId(null);
+    }
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,10 +279,54 @@ export default function DeliveryPersonsPage() {
                           {person.vehicleNumber && <span className="text-xs text-gray-400">({person.vehicleNumber})</span>}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[person.status] || "bg-gray-100 text-gray-700"}`}>
-                          {person.status === "ON_DELIVERY" ? "On Delivery" : person.status.charAt(0) + person.status.slice(1).toLowerCase()}
-                        </span>
+                      <td className="px-4 py-3 relative">
+                        {person.status === "ON_DELIVERY" ? (
+                          <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[person.status] || "bg-gray-100 text-gray-700"}`}>
+                            On Delivery
+                          </span>
+                        ) : (
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(openMenuId === person.id ? null : person.id);
+                              }}
+                              className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[person.status] || "bg-gray-100 text-gray-700"} hover:opacity-80 transition-opacity cursor-pointer`}
+                            >
+                              {person.status === "OFF_DUTY" ? "Off Duty" : person.status.charAt(0) + person.status.slice(1).toLowerCase()}
+                              <ChevronDown className="h-3 w-3" />
+                            </button>
+
+                            {openMenuId === person.id && (
+                              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-[130px]" onClick={(e) => e.stopPropagation()}>
+                                {STATUS_CYCLE.map((status: string) => {
+                                  const isCurrent = person.status === status;
+                                  const label = status === "OFF_DUTY" ? "Off Duty" : status.charAt(0) + status.slice(1).toLowerCase();
+                                  const dotColor =
+                                    status === "ACTIVE" ? "bg-green-500" :
+                                    status === "OFF_DUTY" ? "bg-gray-400" :
+                                    "bg-red-500";
+                                  return (
+                                    <button
+                                      key={status}
+                                      onClick={() => handleToggleStatus(person.id, status)}
+                                      className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${
+                                        isCurrent
+                                          ? "bg-gray-50 text-gray-400 cursor-not-allowed"
+                                          : "text-gray-700 hover:bg-gray-50"
+                                      }`}
+                                      disabled={isCurrent}
+                                    >
+                                      <span className={`inline-block w-2 h-2 rounded-full ${dotColor}`} />
+                                      {label}
+                                      {isCurrent && <span className="ml-auto text-xs text-gray-400">✓</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1 text-sm">
