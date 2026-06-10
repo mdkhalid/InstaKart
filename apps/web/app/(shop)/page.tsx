@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
+import { Search, SlidersHorizontal, Sparkles, X, Loader2 } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -12,8 +12,10 @@ import { QuickViewModal } from "@/components/product/QuickViewModal";
 import api from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/stores/cartStore";
+import { useStoreStore } from "@/stores/storeStore";
 
 export default function HomePage() {
+  const { currentStore, loading: storeLoading } = useStoreStore();
   const [categories, setCategories] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
@@ -27,21 +29,27 @@ export default function HomePage() {
   const [recentlyViewedLoaded, setRecentlyViewedLoaded] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<any | null>(null);
   const syncWithServer = useCartStore((state) => state.syncWithServer);
+  const setStoreId = useCartStore((state) => state.setStoreId);
 
   useEffect(() => {
     syncWithServer();
   }, []);
 
   useEffect(() => {
-    fetchCategories();
-    fetchPopularCategories();
-    fetchTrendingProducts();
-  }, []);
+    if (currentStore) {
+      setStoreId(currentStore.id);
+      fetchCategories();
+      fetchPopularCategories();
+      fetchTrendingProducts();
+    }
+  }, [currentStore]);
 
   useEffect(() => {
-    fetchSuggestions();
-    fetchRecentlyViewed();
-  }, []);
+    if (currentStore) {
+      fetchSuggestions();
+      fetchRecentlyViewed();
+    }
+  }, [currentStore]);
 
   const fetchTrendingProducts = async () => {
     try {
@@ -119,6 +127,48 @@ export default function HomePage() {
       .sort((a, b) => (b._count?.products ?? 0) - (a._count?.products ?? 0))
       .slice(0, 12);
   }, [categories]);
+
+  const { notServiceable, loading: storeDetecting } = useStoreStore();
+
+  if (storeDetecting && !currentStore) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary-600 mx-auto mb-4" />
+            <p className="text-gray-600">Finding your nearest store...</p>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (notServiceable || !currentStore) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center max-w-md">
+            <div className="h-24 w-24 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-6">
+              <span className="text-4xl">🚚</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">We\'re not in your area yet</h1>
+            <p className="text-gray-600 mb-6">
+              We\'re expanding fast! Enter your pincode to check if we deliver to you,
+              or let us know where you\'d like us to launch next.
+            </p>
+            <button
+              onClick={() => window.location.href = "/"}
+              className="bg-primary-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary-700 transition-colors"
+            >
+              Check Again
+            </button>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>

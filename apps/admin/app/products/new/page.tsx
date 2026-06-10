@@ -1,12 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { CategorySelect } from "@/components/CategorySelect";
 import { ImageUploader, type ProductImage } from "@/components/ImageUploader";
 import { PRODUCT_UNITS } from "@instamart/types";
+
+type StoreProductForm = {
+  storeId: string;
+  price: string;
+  salePrice: string;
+  stock: string;
+  lowStockAlert: string;
+  isAvailable: boolean;
+};
 
 type ProductForm = {
   name: string;
@@ -19,6 +28,7 @@ type ProductForm = {
   description: string;
   shortDesc: string;
   isFeatured: boolean;
+  storeProducts: StoreProductForm[];
 };
 
 const EMPTY: ProductForm = {

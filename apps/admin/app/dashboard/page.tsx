@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { LayoutDashboard, Package, ShoppingCart, Users, TrendingUp, AlertTriangle } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { LayoutDashboard, Package, ShoppingCart, Users, TrendingUp, AlertTriangle, Store } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useRouter } from "next/navigation";
 import { StatsCard } from "@/components/StatsCard";
 import { StatusBadge, getStatusVariant } from "@/components/StatusBadge";
+import { StoreFilter } from "@/components/StoreFilter";
 import { formatPrice } from "@/lib/utils";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -14,6 +15,20 @@ export default function DashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [storeId, setStoreId] = useState("");
+
+  const fetchDashboard = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = storeId ? `?storeId=${storeId}` : "";
+      const { data: res } = await api.get(`/admin/dashboard${params}`);
+      setData(res.data);
+    } catch {
+      toast.error("Failed to load dashboard");
+    } finally {
+      setLoading(false);
+    }
+  }, [storeId]);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -22,18 +37,7 @@ export default function DashboardPage() {
       return;
     }
     fetchDashboard();
-  }, []);
-
-  const fetchDashboard = async () => {
-    try {
-      const { data: res } = await api.get("/admin/dashboard");
-      setData(res.data);
-    } catch {
-      toast.error("Failed to load dashboard");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchDashboard]);
 
   if (loading) return <div className="text-center py-12 text-gray-500">Loading dashboard...</div>;
   if (!data) return <div className="text-center py-12 text-red-500">Failed to load data</div>;
@@ -42,7 +46,10 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <StoreFilter value={storeId} onChange={setStoreId} />
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatsCard title="Total Revenue" value={formatPrice(stats.totalRevenue)} icon={<TrendingUp className="h-5 w-5" />} />

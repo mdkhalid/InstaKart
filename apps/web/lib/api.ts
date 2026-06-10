@@ -5,7 +5,7 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Attach access token and visitor ID
+// Attach access token, visitor ID, and store context
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("accessToken");
@@ -17,6 +17,18 @@ api.interceptors.request.use((config) => {
     if (visitorId) {
       config.headers["x-visitor-id"] = visitorId;
     }
+
+    // Attach storeId from persisted store
+    try {
+      const raw = localStorage.getItem("instamart-store");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const storeId = parsed?.state?.currentStore?.id;
+        if (storeId) {
+          config.params = { ...config.params, storeId };
+        }
+      }
+    } catch {}
   }
   return config;
 });

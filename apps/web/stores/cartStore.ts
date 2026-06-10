@@ -12,6 +12,29 @@ interface CartItem {
   slug?: string;
 }
 
+interface CartState {
+  items: CartItem[];
+  isOpen: boolean;
+  coupon: CouponInfo | null;
+  couponLoading: boolean;
+  storeId: string | null;
+  setStoreId: (storeId: string | null) => void;
+  addItem: (product: any, qty?: number) => void;
+  removeItem: (productId: string) => void;
+  updateQty: (productId: string, qty: number) => void;
+  clearCart: () => void;
+  toggleCart: () => void;
+  syncWithServer: () => Promise<void>;
+  syncToServer: () => Promise<void>;
+  validateStock: () => Promise<StockIssue[]>;
+  applyCoupon: (code: string) => Promise<boolean>;
+  removeCoupon: () => void;
+  subtotal: () => number;
+  couponDiscount: () => number;
+  total: () => number;
+  itemCount: () => number;
+}
+
 interface CouponInfo {
   code: string;
   discountType: "PERCENTAGE" | "FIXED";
@@ -56,6 +79,9 @@ export const useCartStore = create<CartState>()(
       isOpen: false,
       coupon: null,
       couponLoading: false,
+      storeId: null,
+
+      setStoreId: (storeId) => set({ storeId }),
 
       addItem: (product, qty = 1) => {
         const existing = get().items.find((i) => i.productId === product.id);
@@ -102,15 +128,17 @@ export const useCartStore = create<CartState>()(
               ),
             }),
 
-      clearCart: () => set({ items: [], coupon: null }),
+      clearCart: () => set({ items: [], coupon: null, storeId: null }),
 
       toggleCart: () => set({ isOpen: !get().isOpen }),
 
       syncToServer: async () => {
         const items = get().items;
+        const storeId = get().storeId;
         if (items.length === 0) return;
         // Single API call: replace entire server cart with local items
         await api.post("/cart/sync", {
+          storeId,
           items: items.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
@@ -265,7 +293,7 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "instamart-cart",
-      partialize: (state) => ({ items: state.items, coupon: state.coupon }),
+      partialize: (state) => ({ items: state.items, coupon: state.coupon, storeId: state.storeId }),
     }
   )
 );

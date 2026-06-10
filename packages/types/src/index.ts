@@ -90,6 +90,44 @@ export interface Address {
   updatedAt: Date;
 }
 
+// Store Types
+export interface Store {
+  id: string;
+  name: string;
+  slug: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  pincode: string;
+  lat: number;
+  lng: number;
+  phone?: string;
+  email?: string;
+  isActive: boolean;
+  openingTime?: string;
+  closingTime?: string;
+  deliveryRadiusKm: number;
+  deliveryFee: number;
+  minOrderAmount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface StoreProduct {
+  id: string;
+  storeId: string;
+  productId: string;
+  price: number;
+  salePrice?: number;
+  costPrice?: number;
+  stock: number;
+  lowStockAlert: number;
+  isAvailable: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Product Types
 export interface Category {
   id: string;
@@ -120,11 +158,11 @@ export interface Product {
   shortDesc?: string;
   sku: string;
   barcode?: string;
-  price: number;
+  price?: number;
   salePrice?: number;
   costPrice?: number;
-  stock: number;
-  lowStockAlert: number;
+  stock?: number;
+  lowStockAlert?: number;
   unit: string;
   categoryId: string;
   category?: Category;
@@ -133,7 +171,7 @@ export interface Product {
   attributes?: Record<string, any>;
   isActive: boolean;
   isFeatured: boolean;
-  isAvailable: boolean;
+  isAvailable?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -151,6 +189,8 @@ export interface CartItem {
 export interface Cart {
   id: string;
   userId: string;
+  storeId?: string;
+  store?: Store;
   items: CartItem[];
   createdAt: Date;
   updatedAt: Date;
@@ -183,6 +223,8 @@ export interface Order {
   user?: User;
   addressId: string;
   address?: Address;
+  storeId?: string;
+  store?: Store;
   items: OrderItem[];
   status: OrderStatus;
   subtotal: number;
@@ -251,6 +293,9 @@ export interface ProductQueryParams {
   sort?: 'price_asc' | 'price_desc' | 'newest' | 'popular';
   featured?: boolean;
   inStock?: boolean;
+  storeId?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface OrderQueryParams {

@@ -9,6 +9,15 @@ const FREE_DELIVERY_THRESHOLD = Number(process.env.FREE_DELIVERY_THRESHOLD) || 4
 const DELIVERY_FEE = Number(process.env.DELIVERY_FEE) || 40;
 const TAX_RATE = Number(process.env.TAX_RATE) || 0.05;
 
+/** Pick the price/stock source: StoreProduct when storeId known, else Product. */
+function buildItemMeta(product: any, sp: any) {
+  return {
+    unitPrice: sp ? (sp.salePrice || sp.price) : (product.salePrice || product.price),
+    stock: sp ? sp.stock : product.stock,
+    isAvailable: sp ? sp.isAvailable : product.isAvailable,
+  };
+}
+
 export const createOrder = async (req: Request, res: Response) => {
   try {
     const { addressId, paymentMethod = "COD", couponCode, notes, estimatedDelivery: preferredDelivery } = req.body;
@@ -17,18 +26,34 @@ export const createOrder = async (req: Request, res: Response) => {
     // Get cart
     const cart = await prisma.cart.findUnique({
       where: { userId },
-      include: {
-        items: {
-          include: {
-            product: { select: { id: true, name: true, price: true, salePrice: true, stock: true, isAvailable: true, images: { take: 1, orderBy: { sortOrder: "asc" }, select: { url: true } } } },
-          },
-        },
-      },
+      include: { items: { take: 1 } },
     });
 
     if (!cart || cart.items.length === 0) {
       return errorResponse(res, "Cart is empty", 400);
     }
+
+    const storeId = cart.storeId;
+
+    // Fetch full cart with store products (if store-scoped)
+    const fullCart = await prisma.cart.findUnique({
+      where: { userId },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true, name: true, price: true, salePrice: true, stock: true, isAvailable: true,
+                images: { take: 1, orderBy: { sortOrder: "asc" }, select: { url: true } },
+                ...(storeId
+                  ? { storeProducts: { where: { storeId }, select: { price: true, salePrice: true, stock: true, isAvailable: true } } }
+                  : {}),
+              } as any,
+            },
+          },
+        },
+      },
+    });
 
     // Validate address
     const address = await prisma.address.findFirst({
@@ -38,21 +63,25 @@ export const createOrder = async (req: Request, res: Response) => {
 
     // Validate stock and build order items
     const orderItems: any[] = [];
-    for (const item of cart.items) {
-      if (!item.product.isAvailable) {
-        return errorResponse(res, `${item.product.name} is not available`, 400);
+    for (const item of fullCart!.items) {
+      const product = item.product;
+      const sp = storeId ? (product as any).storeProducts?.[0] : null;
+      const { unitPrice, stock, isAvailable } = buildItemMeta(product, sp);
+
+      if (!isAvailable) {
+        return errorResponse(res, `${product.name} is not available`, 400);
       }
-      if (item.quantity > item.product.stock) {
-        return errorResponse(res, `Insufficient stock for ${item.product.name}`, 400);
+      if (item.quantity > stock) {
+        return errorResponse(res, `Insufficient stock for ${product.name}`, 400);
       }
 
-      const unitPrice = item.product.salePrice || item.product.price;
+      const p = product as any;
       orderItems.push({
-        productId: item.product.id,
-        productName: item.product.name,
-        productImage: item.product.images[0]?.url || null,
+        productId: p.id,
+        productName: p.name,
+        productImage: p.images?.[0]?.url || null,
         quantity: item.quantity,
-        unitPrice,
+        unitPrice: Number(unitPrice),
         totalPrice: Number(unitPrice) * item.quantity,
       });
     }
@@ -61,7 +90,6 @@ export const createOrder = async (req: Request, res: Response) => {
     const subtotal = orderItems.reduce((sum: number, item: any) => sum + Number(item.totalPrice), 0);
     const deliveryFee = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
 
-    // Apply coupon if provided
     let discount = 0;
     if (couponCode) {
       const coupon = await prisma.coupon.findUnique({ where: { code: couponCode.toUpperCase() } });
@@ -69,7 +97,6 @@ export const createOrder = async (req: Request, res: Response) => {
         discount = coupon.discountType === "PERCENTAGE"
           ? Math.min(subtotal * Number(coupon.discountValue) / 100, Number(coupon.maxDiscount || Infinity))
           : Number(coupon.discountValue);
-
         await prisma.coupon.update({
           where: { id: coupon.id },
           data: { usedCount: { increment: 1 } },
@@ -80,17 +107,13 @@ export const createOrder = async (req: Request, res: Response) => {
     const tax = (subtotal - discount) * TAX_RATE;
     const total = subtotal + deliveryFee - discount + tax;
 
-    // Generate order number using atomic counter (prevents race condition)
     const year = new Date().getFullYear();
-
-    // Calculate estimated delivery (use preferred time or default to 30-60 min from now)
     const estimatedDelivery = preferredDelivery
       ? new Date(preferredDelivery)
       : new Date(Date.now() + (30 + Math.floor(Math.random() * 30)) * 60 * 1000);
 
     // Create order in transaction
     const order = await prisma.$transaction(async (tx) => {
-      // Atomically increment the order counter
       const counter = await tx.orderCounter.upsert({
         where: { year },
         update: { lastValue: { increment: 1 } },
@@ -98,23 +121,36 @@ export const createOrder = async (req: Request, res: Response) => {
       });
       const orderNumber = `IM-${year}-${String(counter.lastValue).padStart(5, "0")}`;
 
-      // Decrement stock
-      for (const item of cart.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: { decrement: item.quantity },
-            isAvailable: { set: item.product.stock - item.quantity > 0 },
-          },
-        });
+      // Decrement stock (from StoreProduct or Product)
+      for (const item of fullCart!.items) {
+        const p = item.product as any;
+        const sp = storeId ? p.storeProducts?.[0] : null;
+
+        if (storeId && sp) {
+          await tx.storeProduct.update({
+            where: { storeId_productId: { storeId, productId: p.id } },
+            data: {
+              stock: { decrement: item.quantity },
+              isAvailable: { set: sp.stock - item.quantity > 0 },
+            },
+          });
+        } else {
+          await tx.product.update({
+            where: { id: p.id },
+            data: {
+              stock: { decrement: item.quantity },
+              isAvailable: { set: p.stock - item.quantity > 0 },
+            },
+          });
+        }
       }
 
-      // Create order
       const newOrder = await tx.order.create({
         data: {
           orderNumber,
           userId,
           addressId,
+          storeId: storeId || null,
           status: paymentMethod === "COD" ? "CONFIRMED" : "PENDING",
           subtotal,
           deliveryFee,
@@ -156,8 +192,7 @@ export const createOrder = async (req: Request, res: Response) => {
     // Clear cart
     await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
-    // Remove ordered products from the user's wishlist (so the wishlist
-    // doesn't keep showing items the customer has just bought).
+    // Remove ordered products from wishlist
     const orderedProductIds = orderItems.map((i: any) => i.productId);
     await prisma.wishlistItem.deleteMany({
       where: {
@@ -279,6 +314,7 @@ export const getReorderPreview = async (req: Request, res: Response) => {
 
     if (!order) return errorResponse(res, "Order not found", 404);
 
+    const storeId = order.storeId;
     const productIds = order.items.map((i) => i.productId);
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
@@ -297,16 +333,23 @@ export const getReorderPreview = async (req: Request, res: Response) => {
           orderBy: { sortOrder: "asc" },
           select: { url: true, altText: true },
         },
-      },
+        ...(storeId
+          ? { storeProducts: { where: { storeId }, select: { price: true, salePrice: true, stock: true, isAvailable: true } } }
+          : {}),
+      } as any,
     });
 
-    const productMap = new Map(products.map((p) => [p.id, p]));
+    const productMap = new Map(products.map((p: any) => [p.id, p]));
 
     const available: any[] = [];
     const unavailable: any[] = [];
 
     for (const item of order.items) {
-      const product = productMap.get(item.productId);
+      const product: any = productMap.get(item.productId);
+      const sp = storeId ? product?.storeProducts?.[0] : null;
+      const { unitPrice, stock, isAvailable } = product
+        ? buildItemMeta(product, sp)
+        : { unitPrice: 0, stock: 0, isAvailable: false };
 
       if (!product || !product.isActive) {
         unavailable.push({
@@ -317,7 +360,7 @@ export const getReorderPreview = async (req: Request, res: Response) => {
         continue;
       }
 
-      if (!product.isAvailable || product.stock <= 0) {
+      if (!isAvailable || stock <= 0) {
         unavailable.push({
           productId: item.productId,
           name: product.name,
@@ -327,22 +370,21 @@ export const getReorderPreview = async (req: Request, res: Response) => {
         continue;
       }
 
-      const currentPrice = product.salePrice ? Number(product.salePrice) : Number(product.price);
-      const originalPrice = Number(product.price);
-      const maxQty = Math.min(item.quantity, product.stock);
+      const currentPrice = Number(unitPrice);
+      const maxQty = Math.min(item.quantity, stock);
 
       available.push({
         productId: product.id,
         name: product.name,
         slug: product.slug,
-        imageUrl: product.images[0]?.url || item.productImage || null,
-        altText: product.images[0]?.altText || null,
+        imageUrl: product.images?.[0]?.url || item.productImage || null,
+        altText: product.images?.[0]?.altText || null,
         unit: product.unit,
         currentPrice,
-        originalPrice,
+        originalPrice: Number(product.price),
         priceChanged: currentPrice !== Number(item.unitPrice),
         previousUnitPrice: Number(item.unitPrice),
-        availableStock: product.stock,
+        availableStock: stock,
         originalQuantity: item.quantity,
         maxQuantity: maxQty,
         isAvailable: true,
@@ -383,13 +425,22 @@ export const cancelOrder = async (req: Request, res: Response) => {
       return errorResponse(res, "Order cannot be cancelled at current status", 400);
     }
 
+    const storeId = order.storeId;
+
     const updatedOrder = await prisma.$transaction(async (tx) => {
-      // Restore stock
+      // Restore stock (StoreProduct or Product)
       for (const item of order.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { increment: item.quantity } },
-        });
+        if (storeId) {
+          await tx.storeProduct.update({
+            where: { storeId_productId: { storeId, productId: item.productId } },
+            data: { stock: { increment: item.quantity } },
+          });
+        } else {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } },
+          });
+        }
       }
 
       return tx.order.update({

@@ -5,7 +5,65 @@ import { uploadImage } from "../services/upload.service";
 import { withCache, clearCache } from "../utils/cache";
 import { logger } from "../utils/logger";
 
-// Public routes
+// ── Helpers ────────────────────────────────────────────
+
+/** Resolve a concrete storeId from query params: explicit storeId, or
+ *  auto-detect the nearest serving store from lat/lng. Returns null when
+ *  neither is available (caller falls back to Product-level fields). */
+async function resolveStoreId(req: Request): Promise<string | null> {
+  const storeId = req.query.storeId as string;
+  if (storeId) return storeId;
+
+  const lat = parseFloat(req.query.lat as string);
+  const lng = parseFloat(req.query.lng as string);
+  if (isNaN(lat) || isNaN(lng)) return null;
+
+  const stores = await prisma.store.findMany({ where: { isActive: true } });
+
+  const EARTH_RADIUS_KM = 6371;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+
+  let nearest: { id: string; distance: number; deliveryRadiusKm: number } | null = null;
+  for (const s of stores) {
+    const dLat = toRad(lat - s.lat);
+    const dLng = toRad(lng - s.lng);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(s.lat)) * Math.cos(toRad(lat)) * Math.sin(dLng / 2) ** 2;
+    const dist = EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    if (dist <= s.deliveryRadiusKm && (!nearest || dist < nearest.distance)) {
+      nearest = { id: s.id, distance: dist, deliveryRadiusKm: s.deliveryRadiusKm };
+    }
+  }
+
+  return nearest?.id ?? null;
+}
+
+function enrichProduct(
+  p: any,
+  sp?: { price: any; salePrice: any; stock: number; isAvailable: boolean } | null,
+) {
+  const price = sp ? Number(sp.price) : Number(p.price);
+  const salePrice = sp
+    ? sp.salePrice ? Number(sp.salePrice) : null
+    : p.salePrice ? Number(p.salePrice) : null;
+  const stock = sp ? sp.stock : p.stock;
+  const isAvailable = sp ? sp.isAvailable : p.isAvailable;
+
+  return {
+    ...p,
+    price,
+    salePrice,
+    costPrice: undefined,
+    stock,
+    lowStockAlert: sp ? (sp as any).lowStockAlert ?? p.lowStockAlert : p.lowStockAlert,
+    isAvailable,
+    discountPercent: salePrice ? Math.round(((price - salePrice) / price) * 100) : 0,
+  };
+}
+
+// ── Public routes ──────────────────────────────────────
+
 export const checkStock = async (req: Request, res: Response) => {
   try {
     const { productIds } = req.body;
@@ -13,16 +71,28 @@ export const checkStock = async (req: Request, res: Response) => {
       return successResponse(res, {});
     }
 
+    const storeId = await resolveStoreId(req);
+
+    if (storeId) {
+      const sps = await prisma.storeProduct.findMany({
+        where: { storeId, productId: { in: productIds } },
+        select: { productId: true, stock: true, isAvailable: true },
+      });
+      const stockMap: Record<string, { stock: number; isAvailable: boolean }> = {};
+      for (const sp of sps) {
+        stockMap[sp.productId] = { stock: sp.stock, isAvailable: sp.isAvailable };
+      }
+      return successResponse(res, stockMap);
+    }
+
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
       select: { id: true, stock: true, isAvailable: true },
     });
-
     const stockMap: Record<string, { stock: number; isAvailable: boolean }> = {};
     for (const p of products) {
       stockMap[p.id] = { stock: p.stock, isAvailable: p.isAvailable };
     }
-
     return successResponse(res, stockMap);
   } catch (error) {
     logger.error("Check stock error:", error);
@@ -37,37 +107,105 @@ export const listProducts = async (req: Request, res: Response) => {
     const skip = (page - 1) * limit;
     const { category, minPrice, maxPrice, search, sort, featured, inStock } = req.query;
 
-    const where: any = { isActive: true };
+    const storeId = await resolveStoreId(req);
+
+    const productWhere: any = { isActive: true };
 
     if (category) {
       const cat = await prisma.category.findUnique({ where: { slug: category as string } });
-      if (cat) where.categoryId = cat.id;
+      if (cat) productWhere.categoryId = cat.id;
     }
 
-    if (minPrice) where.price = { ...where.price, gte: parseFloat(minPrice as string) };
-    if (maxPrice) where.price = { ...where.price, lte: parseFloat(maxPrice as string) };
-
     if (search) {
-      where.OR = [
+      productWhere.OR = [
         { name: { contains: search as string, mode: "insensitive" } },
         { description: { contains: search as string, mode: "insensitive" } },
         { tags: { has: search as string } },
       ];
     }
 
-    if (featured === "true") where.isFeatured = true;
-    if (inStock === "true") where.isAvailable = true;
+    if (featured === "true") productWhere.isFeatured = true;
 
-    let orderBy: any = { createdAt: "desc" };
-    switch (sort) {
-      case "price_asc": orderBy = { price: "asc" }; break;
-      case "price_desc": orderBy = { price: "desc" }; break;
-      case "newest": orderBy = { createdAt: "desc" }; break;
-      case "popular": orderBy = { orderItems: { _count: "desc" } }; break;
-    }
+    const cacheKey = `products:list:${storeId || "global"}:${JSON.stringify({ page, limit, category, minPrice, maxPrice, search, sort, featured, inStock })}`;
 
-    const cacheKey = `products:list:${JSON.stringify({ page, limit, category, minPrice, maxPrice, search, sort, featured, inStock })}`;
     const enriched = await withCache(cacheKey, async () => {
+      if (storeId) {
+        // ── Store-scoped query via StoreProduct ──
+        const spWhere: any = { storeId, product: productWhere };
+
+        if (minPrice) spWhere.price = { ...spWhere.price, gte: parseFloat(minPrice as string) };
+        if (maxPrice) spWhere.price = { ...spWhere.price, lte: parseFloat(maxPrice as string) };
+        if (inStock === "true") spWhere.isAvailable = true;
+
+        let orderBy: any = { createdAt: "desc" as const };
+        switch (sort) {
+          case "price_asc": orderBy = { price: "asc" as const }; break;
+          case "price_desc": orderBy = { price: "desc" as const }; break;
+          case "newest": orderBy = { product: { createdAt: "desc" as const } }; break;
+          case "popular": orderBy = { product: { orderItems: { _count: "desc" as const } } }; break;
+        }
+
+        const [spRows, total] = await Promise.all([
+          prisma.storeProduct.findMany({
+            where: spWhere,
+            skip,
+            take: limit,
+            orderBy,
+            include: {
+              product: {
+                include: {
+                  category: { select: { id: true, name: true, slug: true } },
+                  images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
+                  _count: { select: { reviews: true } },
+                },
+              },
+            },
+          }),
+          prisma.storeProduct.count({ where: spWhere }),
+        ]);
+
+        const products = spRows.map((sp) => ({
+          ...sp.product,
+          storeProduct: {
+            price: Number(sp.price),
+            salePrice: sp.salePrice ? Number(sp.salePrice) : null,
+            stock: sp.stock,
+            isAvailable: sp.isAvailable,
+          },
+        }));
+
+        const productIds = products.map((p: any) => p.id);
+        const ratingAggs = productIds.length > 0 ? await prisma.review.groupBy({
+          by: ["productId"],
+          where: { productId: { in: productIds } },
+          _avg: { rating: true },
+        }) : [];
+        const ratingMap = new Map(ratingAggs.map((r) => [r.productId, r._avg.rating]));
+
+        return {
+          products: products.map((p: any) => ({
+            ...enrichProduct(p, p.storeProduct),
+            rating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
+            reviewsCount: (p as any)._count?.reviews ?? 0,
+          })),
+          pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+        };
+      }
+
+      // ── Fallback: Product-level fields ──
+      const where: any = { ...productWhere };
+      if (minPrice) where.price = { ...where.price, gte: parseFloat(minPrice as string) };
+      if (maxPrice) where.price = { ...where.price, lte: parseFloat(maxPrice as string) };
+      if (inStock === "true") where.isAvailable = true;
+
+      let orderBy: any = { createdAt: "desc" };
+      switch (sort) {
+        case "price_asc": orderBy = { price: "asc" }; break;
+        case "price_desc": orderBy = { price: "desc" }; break;
+        case "newest": orderBy = { createdAt: "desc" }; break;
+        case "popular": orderBy = { orderItems: { _count: "desc" } }; break;
+      }
+
       const [products, total] = await Promise.all([
         prisma.product.findMany({
           where,
@@ -83,7 +221,6 @@ export const listProducts = async (req: Request, res: Response) => {
         prisma.product.count({ where }),
       ]);
 
-      // Get average ratings for all products in one query
       const productIds = products.map((p) => p.id);
       const ratingAggs = productIds.length > 0 ? await prisma.review.groupBy({
         by: ["productId"],
@@ -94,16 +231,13 @@ export const listProducts = async (req: Request, res: Response) => {
 
       return {
         products: products.map((p) => ({
-          ...p,
-          price: Number(p.price),
-          salePrice: p.salePrice ? Number(p.salePrice) : null,
-          discountPercent: p.salePrice ? Math.round(((Number(p.price) - Number(p.salePrice)) / Number(p.price)) * 100) : 0,
+          ...enrichProduct(p),
           rating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
           reviewsCount: p._count?.reviews ?? 0,
         })),
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
       };
-    }, 30_000); // Cache for 30 seconds
+    }, 30_000);
 
     return successResponse(res, enriched);
   } catch (error) {
@@ -114,46 +248,66 @@ export const listProducts = async (req: Request, res: Response) => {
 
 export const getTrendingProducts = async (req: Request, res: Response) => {
   try {
-    const enriched = await withCache("products:trending", async () => {
+    const storeId = await resolveStoreId(req);
+    const cacheKey = `products:trending:${storeId || "global"}`;
+
+    const enriched = await withCache(cacheKey, async () => {
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-      const trendingProducts = await prisma.product.findMany({
-        where: {
-          isActive: true,
-          isAvailable: true,
-          orderItems: {
-            some: {
-              order: {
-                createdAt: { gte: oneWeekAgo },
-                status: { in: ["CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY", "DELIVERED"] },
-              },
+      const trendingWhere: any = {
+        isActive: true,
+        orderItems: {
+          some: {
+            order: {
+              createdAt: { gte: oneWeekAgo },
+              status: { in: ["CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY", "DELIVERED"] },
             },
           },
         },
+      };
+
+      if (storeId) {
+        trendingWhere.storeProducts = {
+          some: { storeId, isAvailable: true },
+        };
+      } else {
+        trendingWhere.isAvailable = true;
+      }
+
+      let products = await prisma.product.findMany({
+        where: trendingWhere,
         take: 10,
         orderBy: { orderItems: { _count: "desc" } },
         include: {
           category: { select: { id: true, name: true, slug: true } },
           images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
           _count: { select: { reviews: true } },
+          ...(storeId ? { storeProducts: { where: { storeId }, take: 1 } } : {}),
         },
       });
 
-      const productsToReturn = trendingProducts.length > 0
-        ? trendingProducts
-        : await prisma.product.findMany({
-            where: { isActive: true, isAvailable: true },
-            take: 10,
-            orderBy: { createdAt: "desc" },
-            include: {
-              category: { select: { id: true, name: true, slug: true } },
-              images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
-              _count: { select: { reviews: true } },
-            },
-          });
+      if (products.length === 0) {
+        const fallbackWhere: any = { isActive: true };
+        if (storeId) {
+          fallbackWhere.storeProducts = { some: { storeId, isAvailable: true } };
+        } else {
+          fallbackWhere.isAvailable = true;
+        }
+        products = await prisma.product.findMany({
+          where: fallbackWhere,
+          take: 10,
+          orderBy: { createdAt: "desc" },
+          include: {
+            category: { select: { id: true, name: true, slug: true } },
+            images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
+            _count: { select: { reviews: true } },
+            ...(storeId ? { storeProducts: { where: { storeId }, take: 1 } } : {}),
+          },
+        });
+      }
 
-      const productIds = productsToReturn.map((p) => p.id);
+      const productIds = products.map((p) => p.id);
       const ratingAggs = productIds.length > 0 ? await prisma.review.groupBy({
         by: ["productId"],
         where: { productId: { in: productIds } },
@@ -161,15 +315,12 @@ export const getTrendingProducts = async (req: Request, res: Response) => {
       }) : [];
       const ratingMap = new Map(ratingAggs.map((r) => [r.productId, r._avg.rating]));
 
-      return productsToReturn.map((p) => ({
-        ...p,
-        price: Number(p.price),
-        salePrice: p.salePrice ? Number(p.salePrice) : null,
-        discountPercent: p.salePrice ? Math.round(((Number(p.price) - Number(p.salePrice)) / Number(p.price)) * 100) : 0,
+      return products.map((p: any) => ({
+        ...enrichProduct(p, storeId ? p.storeProducts?.[0] : null),
         rating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
         reviewsCount: p._count?.reviews ?? 0,
       }));
-    }, 60_000); // Cache for 60 seconds (trending changes slowly)
+    }, 60_000);
 
     return successResponse(res, enriched);
   } catch (error) {
@@ -180,14 +331,25 @@ export const getTrendingProducts = async (req: Request, res: Response) => {
 
 export const getFeatured = async (req: Request, res: Response) => {
   try {
-    const enriched = await withCache("products:featured", async () => {
+    const storeId = await resolveStoreId(req);
+    const cacheKey = `products:featured:${storeId || "global"}`;
+
+    const enriched = await withCache(cacheKey, async () => {
+      const productWhere: any = { isFeatured: true, isActive: true };
+      if (storeId) {
+        productWhere.storeProducts = { some: { storeId, isAvailable: true } };
+      } else {
+        productWhere.isAvailable = true;
+      }
+
       const products = await prisma.product.findMany({
-        where: { isFeatured: true, isActive: true, isAvailable: true },
+        where: productWhere,
         take: 10,
         include: {
           category: { select: { id: true, name: true, slug: true } },
           images: { select: { url: true, isPrimary: true, altText: true }, orderBy: { sortOrder: "asc" } },
           _count: { select: { reviews: true } },
+          ...(storeId ? { storeProducts: { where: { storeId }, take: 1 } } : {}),
         },
       });
 
@@ -199,15 +361,12 @@ export const getFeatured = async (req: Request, res: Response) => {
       }) : [];
       const ratingMap = new Map(ratingAggs.map((r) => [r.productId, r._avg.rating]));
 
-      return products.map((p) => ({
-        ...p,
-        price: Number(p.price),
-        salePrice: p.salePrice ? Number(p.salePrice) : null,
-        discountPercent: p.salePrice ? Math.round(((Number(p.price) - Number(p.salePrice)) / Number(p.price)) * 100) : 0,
+      return products.map((p: any) => ({
+        ...enrichProduct(p, storeId ? p.storeProducts?.[0] : null),
         rating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
         reviewsCount: p._count?.reviews ?? 0,
       }));
-    }, 60_000); // Cache for 60 seconds
+    }, 60_000);
 
     return successResponse(res, enriched);
   } catch (error) {
@@ -221,21 +380,30 @@ export const searchProducts = async (req: Request, res: Response) => {
     const q = req.query.q as string;
     if (!q) return successResponse(res, []);
 
+    const storeId = await resolveStoreId(req);
+
+    const where: any = {
+      isActive: true,
+      OR: [
+        { name: { contains: q, mode: "insensitive" } },
+        { description: { contains: q, mode: "insensitive" } },
+        { tags: { has: q } },
+        { sku: { contains: q, mode: "insensitive" } },
+      ],
+    };
+
+    if (storeId) {
+      where.storeProducts = { some: { storeId, isAvailable: true } };
+    }
+
     const products = await prisma.product.findMany({
-      where: {
-        isActive: true,
-        OR: [
-          { name: { contains: q, mode: "insensitive" } },
-          { description: { contains: q, mode: "insensitive" } },
-          { tags: { has: q } },
-          { sku: { contains: q, mode: "insensitive" } },
-        ],
-      },
+      where,
       take: 20,
       include: {
         category: { select: { id: true, name: true, slug: true } },
         images: { where: { isPrimary: true }, select: { url: true } },
         _count: { select: { reviews: true } },
+        ...(storeId ? { storeProducts: { where: { storeId }, take: 1 } } : {}),
       },
     });
 
@@ -247,13 +415,8 @@ export const searchProducts = async (req: Request, res: Response) => {
     });
     const ratingMap = new Map(ratingAggs.map((r) => [r.productId, r._avg.rating]));
 
-    const enriched = products.map((p) => ({
-      ...p,
-      price: Number(p.price),
-      salePrice: p.salePrice ? Number(p.salePrice) : null,
-      discountPercent: p.salePrice
-        ? Math.round(((Number(p.price) - Number(p.salePrice)) / Number(p.price)) * 100)
-        : 0,
+    const enriched = products.map((p: any) => ({
+      ...enrichProduct(p, storeId ? p.storeProducts?.[0] : null),
       averageRating: ratingMap.get(p.id) ? Math.round(Number(ratingMap.get(p.id)) * 10) / 10 : 0,
     }));
 
@@ -267,18 +430,22 @@ export const searchProducts = async (req: Request, res: Response) => {
 export const getProduct = async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
+    const storeId = await resolveStoreId(req);
 
     const product = await prisma.product.findUnique({
       where: { slug },
       include: {
         category: { select: { id: true, name: true, slug: true } },
         images: { orderBy: { sortOrder: "asc" } },
+        ...(storeId ? { storeProducts: { where: { storeId }, take: 1 } } : {}),
       },
     });
 
     if (!product || !product.isActive) {
       return errorResponse(res, "Product not found", 404);
     }
+
+    const sp = storeId ? (product as any).storeProducts?.[0] : null;
 
     // Get review stats
     const reviewAgg = await prisma.review.aggregate({
@@ -288,13 +455,8 @@ export const getProduct = async (req: Request, res: Response) => {
     });
 
     const enriched = {
-      ...product,
-      price: Number(product.price),
-      salePrice: product.salePrice ? Number(product.salePrice) : null,
-      costPrice: product.costPrice ? Number(product.costPrice) : null,
-      discountPercent: product.salePrice
-        ? Math.round(((Number(product.price) - Number(product.salePrice)) / Number(product.price)) * 100)
-        : 0,
+      ...enrichProduct(product, sp),
+      costPrice: sp ? (sp.costPrice ? Number(sp.costPrice) : null) : (product.costPrice ? Number(product.costPrice) : null),
       averageRating: reviewAgg._avg.rating ? Math.round(Number(reviewAgg._avg.rating) * 10) / 10 : 0,
       totalReviews: reviewAgg._count,
     };
@@ -306,10 +468,11 @@ export const getProduct = async (req: Request, res: Response) => {
   }
 };
 
-// Admin routes
+// ── Admin routes (unchanged — operate on Product-level fields) ────────────
+
 export const createProduct = async (req: Request, res: Response) => {
   try {
-    const { name, description, shortDesc, sku, barcode, price, salePrice, costPrice, stock, lowStockAlert, unit, categoryId, tags, attributes, isFeatured } = req.body;
+    const { name, description, shortDesc, sku, barcode, price, salePrice, costPrice, stock, lowStockAlert, unit, categoryId, tags, attributes, isFeatured, storeProducts } = req.body;
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -318,21 +481,41 @@ export const createProduct = async (req: Request, res: Response) => {
       return errorResponse(res, "Product with this name already exists", 409);
     }
 
-    const product = await prisma.product.create({
-      data: {
-        name, slug, description, shortDesc, sku, barcode,
-        price, salePrice, costPrice,
-        stock, lowStockAlert, unit, categoryId,
-        tags: tags || [], attributes, isFeatured: isFeatured || false,
-        isAvailable: stock > 0,
-      },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-        images: true,
-      },
+    const product = await prisma.$transaction(async (tx) => {
+      const newProduct = await tx.product.create({
+        data: {
+          name, slug, description, shortDesc, sku, barcode,
+          price, salePrice, costPrice,
+          stock, lowStockAlert, unit, categoryId,
+          tags: tags || [], attributes, isFeatured: isFeatured || false,
+          isAvailable: stock > 0,
+        },
+        include: {
+          category: { select: { id: true, name: true, slug: true } },
+          images: true,
+        },
+      });
+
+      if (storeProducts && storeProducts.length > 0) {
+        for (const sp of storeProducts) {
+          await tx.storeProduct.create({
+            data: {
+              storeId: sp.storeId,
+              productId: newProduct.id,
+              price: sp.price,
+              salePrice: sp.salePrice ?? null,
+              costPrice: sp.costPrice ?? null,
+              stock: sp.stock,
+              lowStockAlert: sp.lowStockAlert,
+              isAvailable: sp.isAvailable,
+            },
+          });
+        }
+      }
+
+      return newProduct;
     });
 
-    // Invalidate product list caches since data changed
     clearCache("products:");
 
     return successResponse(res, { ...product, price: Number(product.price) }, "Product created", 201);
@@ -345,9 +528,8 @@ export const createProduct = async (req: Request, res: Response) => {
 export const updateProduct = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const data: any = { ...req.body };
+    const { storeProducts, ...data } = req.body;
 
-    // If name changed, update slug
     if (data.name) {
       data.slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     }
@@ -356,16 +538,45 @@ export const updateProduct = async (req: Request, res: Response) => {
       data.isAvailable = data.stock > 0;
     }
 
-    const product = await prisma.product.update({
-      where: { id },
-      data,
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-        images: true,
-      },
+    const product = await prisma.$transaction(async (tx) => {
+      const updated = await tx.product.update({
+        where: { id },
+        data,
+        include: {
+          category: { select: { id: true, name: true, slug: true } },
+          images: true,
+        },
+      });
+
+      if (storeProducts && storeProducts.length > 0) {
+        for (const sp of storeProducts) {
+          await tx.storeProduct.upsert({
+            where: { storeId_productId: { storeId: sp.storeId, productId: id } },
+            update: {
+              price: sp.price,
+              salePrice: sp.salePrice ?? null,
+              costPrice: sp.costPrice ?? null,
+              stock: sp.stock,
+              lowStockAlert: sp.lowStockAlert,
+              isAvailable: sp.isAvailable,
+            },
+            create: {
+              storeId: sp.storeId,
+              productId: id,
+              price: sp.price,
+              salePrice: sp.salePrice ?? null,
+              costPrice: sp.costPrice ?? null,
+              stock: sp.stock,
+              lowStockAlert: sp.lowStockAlert,
+              isAvailable: sp.isAvailable,
+            },
+          });
+        }
+      }
+
+      return updated;
     });
 
-    // Invalidate product list caches since data changed
     clearCache("products:");
 
     return successResponse(res, product, "Product updated");
@@ -382,7 +593,6 @@ export const deleteProduct = async (req: Request, res: Response) => {
       where: { id },
       data: { isActive: false },
     });
-    // Invalidate product list caches since data changed
     clearCache("products:");
     return successResponse(res, null, "Product deactivated");
   } catch (error) {
@@ -419,7 +629,6 @@ export const uploadProductImages = async (req: Request, res: Response) => {
       include: { images: { orderBy: { sortOrder: "asc" } } },
     });
 
-    // Invalidate product list caches since images changed
     clearCache("products:");
 
     return successResponse(res, product, "Images uploaded");

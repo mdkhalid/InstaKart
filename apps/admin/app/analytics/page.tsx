@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Eye, Users, BarChart3 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { StatsCard } from "@/components/StatsCard";
+import { StoreFilter } from "@/components/StoreFilter";
 import { formatPrice } from "@/lib/utils";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -14,6 +15,20 @@ export default function AnalyticsPage() {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [storeId, setStoreId] = useState("");
+
+  const fetchAnalytics = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = storeId ? `?storeId=${storeId}` : "";
+      const { data: res } = await api.get(`/admin/analytics${params}`);
+      setData(res.data);
+    } catch {
+      toast.error("Failed to load analytics");
+    } finally {
+      setLoading(false);
+    }
+  }, [storeId]);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -22,18 +37,7 @@ export default function AnalyticsPage() {
       return;
     }
     fetchAnalytics();
-  }, []);
-
-  const fetchAnalytics = async () => {
-    try {
-      const { data: res } = await api.get("/admin/analytics");
-      setData(res.data);
-    } catch {
-      toast.error("Failed to load analytics");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchAnalytics]);
 
   if (loading) return <div className="text-center py-12 text-gray-500">Loading analytics...</div>;
   if (!data) return <div className="text-center py-12 text-red-500">Failed to load data</div>;
@@ -42,18 +46,19 @@ export default function AnalyticsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Analytics</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
+        <StoreFilter value={storeId} onChange={setStoreId} />
+      </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatsCard title="Total Searches (30d)" value={summary.totalSearches} icon={<Search className="h-5 w-5" />} />
-        <StatsCard title="Unique Searchers" value={summary.uniqueSearchers} icon={<Users className="h-5 w-5" />} />
-        <StatsCard title="Unique Search Terms" value={summary.uniqueSearchTerms} icon={<BarChart3 className="h-5 w-5" />} />
+        <StatsCard title="Total Searches (30d)" value={summary?.totalSearches || 0} icon={<Search className="h-5 w-5" />} />
+        <StatsCard title="Unique Searchers" value={summary?.uniqueSearchers || 0} icon={<Users className="h-5 w-5" />} />
+        <StatsCard title="Unique Search Terms" value={summary?.uniqueSearchTerms || 0} icon={<BarChart3 className="h-5 w-5" />} />
         <StatsCard title="Products Viewed" value={topViewedProducts?.length || 0} icon={<Eye className="h-5 w-5" />} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Search Trend Chart */}
         <div className="bg-white rounded-xl border p-6">
           <h2 className="text-lg font-semibold mb-4">Search Trends (Last 14 Days)</h2>
           {searchTrend?.length === 0 ? (
@@ -92,7 +97,6 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        {/* Top Searches */}
         <div className="bg-white rounded-xl border p-6">
           <h2 className="text-lg font-semibold mb-4">Top Search Queries</h2>
           {topSearches?.length === 0 ? (
@@ -119,7 +123,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Top Viewed Products */}
       <div className="bg-white rounded-xl border p-6">
         <h2 className="text-lg font-semibold mb-4">Top Viewed Products</h2>
         {topViewedProducts?.length === 0 ? (

@@ -13,11 +13,13 @@ import {
   BarChart3,
   LogOut,
   AlertCircle,
+  Store,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/stores", label: "Stores", icon: Store },
   { href: "/products", label: "Products", icon: Package },
   { href: "/orders", label: "Orders", icon: ShoppingCart },
   { href: "/issues", label: "Issues & Refunds", icon: AlertCircle },

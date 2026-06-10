@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { VisitorInit } from "@/components/VisitorInit";
+import { StoreInit } from "@/components/StoreInit";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,6 +21,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <VisitorInit />
+        <StoreInit />
         <div className="min-h-screen flex flex-col">
           {children}
         </div>

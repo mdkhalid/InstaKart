@@ -37,6 +37,7 @@ export const getDashboard = async (_req: Request, res: Response) => {
       recentOrders,
       topProducts,
       dailyRevenue,
+      totalStores,
     ] = await Promise.all([
       prisma.order.aggregate({
         _sum: { total: true },
@@ -73,6 +74,7 @@ export const getDashboard = async (_req: Request, res: Response) => {
          ORDER BY date ASC`,
         thirtyDaysAgo
       ),
+      prisma.store.count({ where: { isActive: true } }),
     ]);
 
     // Build a complete 30-day chart (fill in missing days with 0)
@@ -100,6 +102,7 @@ export const getDashboard = async (_req: Request, res: Response) => {
         lowStockProducts,
         totalUsers,
         newUsersToday,
+        totalStores,
       },
       recentOrders: recentOrders.map((o) => ({
         ...o,
@@ -124,10 +127,11 @@ export const getAllOrders = async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const skip = (page - 1) * limit;
-    const { status, search } = req.query;
+    const { status, search, storeId } = req.query;
 
     const where: any = {};
     if (status) where.status = status;
+    if (storeId) where.storeId = storeId as string;
     if (search) {
       where.OR = [
         { orderNumber: { contains: search as string, mode: "insensitive" } },
@@ -191,11 +195,19 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
     // Handle refund or cancellation - restore stock
     if (status === "REFUNDED" || status === "CANCELLED") {
       const items = await prisma.orderItem.findMany({ where: { orderId: id } });
+      const storeId = order.storeId;
       for (const item of items) {
-        await prisma.product.update({
-          where: { id: item.productId },
-          data: { stock: { increment: item.quantity } },
-        });
+        if (storeId) {
+          await prisma.storeProduct.update({
+            where: { storeId_productId: { storeId, productId: item.productId } },
+            data: { stock: { increment: item.quantity } },
+          });
+        } else {
+          await prisma.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } },
+          });
+        }
       }
     }
 
@@ -255,6 +267,7 @@ export const getOrderDetail = async (req: Request, res: Response) => {
       include: {
         user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
         address: true,
+        store: { select: { id: true, name: true, slug: true } },
         items: true,
         statusHistory: { orderBy: { createdAt: "asc" } },
       },
@@ -711,7 +724,7 @@ export const adminListProducts = async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
     const skip = (page - 1) * limit;
-    const { search, categoryId, isActive } = req.query;
+    const { search, categoryId, isActive, storeId } = req.query;
 
     const where: any = {};
     if (search) {
@@ -724,27 +737,42 @@ export const adminListProducts = async (req: Request, res: Response) => {
     if (isActive === "true") where.isActive = true;
     if (isActive === "false") where.isActive = false;
 
+    const includeClause: any = {
+      category: { select: { id: true, name: true, slug: true } },
+      images: { orderBy: { sortOrder: "asc" }, select: { url: true, isPrimary: true } },
+      _count: { select: { orderItems: true, reviews: true } },
+    };
+
+    if (storeId) {
+      includeClause.storeProducts = {
+        where: { storeId: storeId as string },
+        select: { price: true, salePrice: true, costPrice: true, stock: true, lowStockAlert: true, isAvailable: true },
+      };
+    }
+
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
         skip,
         take: limit,
         orderBy: { createdAt: "desc" },
-        include: {
-          category: { select: { id: true, name: true, slug: true } },
-          images: { orderBy: { sortOrder: "asc" }, select: { url: true, isPrimary: true } },
-          _count: { select: { orderItems: true, reviews: true } },
-        },
+        include: includeClause,
       }),
       prisma.product.count({ where }),
     ]);
 
-    const enriched = products.map((p) => ({
-      ...p,
-      price: Number(p.price),
-      salePrice: p.salePrice ? Number(p.salePrice) : null,
-      costPrice: p.costPrice ? Number(p.costPrice) : null,
-    }));
+    const enriched = products.map((p: any) => {
+      const sp = storeId ? p.storeProducts?.[0] : null;
+      return {
+        ...p,
+        price: sp ? Number(sp.price) : Number(p.price),
+        salePrice: sp ? (sp.salePrice ? Number(sp.salePrice) : null) : (p.salePrice ? Number(p.salePrice) : null),
+        costPrice: sp ? (sp.costPrice ? Number(sp.costPrice) : null) : (p.costPrice ? Number(p.costPrice) : null),
+        stock: sp ? sp.stock : p.stock,
+        lowStockAlert: sp ? sp.lowStockAlert : p.lowStockAlert,
+        isAvailable: sp ? sp.isAvailable : p.isAvailable,
+      };
+    });
 
     return successResponse(res, {
       products: enriched,
@@ -760,20 +788,37 @@ export const adminListProducts = async (req: Request, res: Response) => {
 export const adminGetProduct = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const product = await prisma.product.findUnique({
+    const { storeId } = req.query;
+
+    const includeClause: any = {
+      category: { select: { id: true, name: true, slug: true } },
+      images: { orderBy: { sortOrder: "asc" } },
+      _count: { select: { orderItems: true, reviews: true } },
+    };
+
+    if (storeId) {
+      includeClause.storeProducts = {
+        where: { storeId: storeId as string },
+        select: { price: true, salePrice: true, costPrice: true, stock: true, lowStockAlert: true, isAvailable: true },
+      };
+    }
+
+    const product: any = await prisma.product.findUnique({
       where: { id },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-        images: { orderBy: { sortOrder: "asc" } },
-        _count: { select: { orderItems: true, reviews: true } },
-      },
+      include: includeClause,
     });
     if (!product) return errorResponse(res, "Product not found", 404);
+
+    const sp = storeId ? product.storeProducts?.[0] : null;
+
     return successResponse(res, {
       ...product,
-      price: Number(product.price),
-      salePrice: product.salePrice ? Number(product.salePrice) : null,
-      costPrice: product.costPrice ? Number(product.costPrice) : null,
+      price: sp ? Number(sp.price) : Number(product.price),
+      salePrice: sp ? (sp.salePrice ? Number(sp.salePrice) : null) : (product.salePrice ? Number(product.salePrice) : null),
+      costPrice: sp ? (sp.costPrice ? Number(sp.costPrice) : null) : (product.costPrice ? Number(product.costPrice) : null),
+      stock: sp ? sp.stock : product.stock,
+      lowStockAlert: sp ? sp.lowStockAlert : product.lowStockAlert,
+      isAvailable: sp ? sp.isAvailable : product.isAvailable,
     });
   } catch (error) {
     logger.error("Admin get product error:", error);

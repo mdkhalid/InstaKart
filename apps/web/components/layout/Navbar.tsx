@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ShoppingCart, User, LogOut, Package, Menu, X, Heart, MapPin, ChevronDown } from "lucide-react";
+import { ShoppingCart, User, LogOut, Package, Menu, X, Heart, MapPin, ChevronDown, Store } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { useWishlistStore } from "@/stores/wishlistStore";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { StoreSelector } from "@/components/StoreSelector";
 
 export function Navbar() {
   const router = useRouter();
@@ -84,7 +85,8 @@ export function Navbar() {
             </Link>
 
             {/* Delivery Location */}
-            <div className="hidden md:flex items-center">
+            <div className="hidden md:flex items-center space-x-4">
+              <StoreSelector />
               {editingLocation ? (
                 <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5">
                   <MapPin className="h-4 w-4 text-primary-600 flex-shrink-0" />

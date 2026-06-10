@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Edit, ToggleLeft, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
+import { StoreFilter } from "@/components/StoreFilter";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useConfirm } from "@/hooks/useConfirm";
 import { formatPrice } from "@/lib/utils";
@@ -15,22 +16,23 @@ export default function ProductsPage() {
   const router = useRouter();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [storeId, setStoreId] = useState("");
   const { confirm, dialogProps } = useConfirm();
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
     try {
-      const { data } = await api.get("/admin/products?limit=100");
+      const params = storeId ? `?storeId=${storeId}` : "";
+      const { data } = await api.get(`/admin/products?limit=100${params}`);
       setProducts(data.data?.products || []);
     } catch {
       toast.error("Failed to load products");
     } finally {
       setLoading(false);
     }
-  };
+  }, [storeId]);
+
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const toggleProduct = async (id: string, currentActive: boolean) => {
     try {
@@ -75,10 +77,10 @@ export default function ProductsPage() {
     { key: "sku", label: "SKU" },
     {
       key: "price",
-      label: "Price",
+      label: storeId ? "Store Price" : "Price",
       render: (v: number) => formatPrice(Number(v)),
     },
-    { key: "stock", label: "Stock" },
+    { key: "stock", label: storeId ? "Store Stock" : "Stock" },
     {
       key: "isActive",
       label: "Status",
@@ -120,13 +122,16 @@ export default function ProductsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-        <button
-          onClick={() => router.push("/products/new")}
-          className="flex items-center space-x-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-medium"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add Product</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <StoreFilter value={storeId} onChange={setStoreId} />
+          <button
+            onClick={() => router.push("/products/new")}
+            className="flex items-center space-x-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-medium"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Product</span>
+          </button>
+        </div>
       </div>
       <DataTable columns={columns} data={products} loading={loading} searchable />
       {dialogProps && <ConfirmDialog {...dialogProps} />}

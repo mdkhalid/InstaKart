@@ -19,6 +19,7 @@ import wishlistRoutes from "./routes/wishlist.routes";
 import reviewRoutes from "./routes/review.routes";
 import suggestionRoutes from "./routes/suggestion.routes";
 import uploadRoutes from "./routes/upload.routes";
+import storeRoutes from "./routes/store.routes";
 
 const app = express();
 
@@ -72,6 +73,7 @@ app.use("/api/v1/wishlist", wishlistRoutes);
 app.use("/api/v1/reviews", reviewRoutes);
 app.use("/api/v1/suggestions", suggestionRoutes);
 app.use("/api/v1/upload", uploadRoutes);
+app.use("/api/v1/stores", storeRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);
