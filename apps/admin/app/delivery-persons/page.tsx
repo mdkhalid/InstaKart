@@ -119,7 +119,7 @@ export default function DeliveryPersonsPage() {
             <Button variant="outline" size="sm" onClick={() => { fetchPersons(); fetchStats(); }}>
               <RefreshCw className="h-4 w-4 mr-1" /> Refresh
             </Button>
-            <Button size="sm" onClick={() => toast.success("Feature coming: Create delivery person form")}>
+            <Button size="sm" onClick={() => router.push("/delivery-persons/new")}>
               <Plus className="h-4 w-4 mr-1" /> Add Person
             </Button>
           </div>

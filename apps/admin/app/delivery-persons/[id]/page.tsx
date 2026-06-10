@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, Phone, Mail, Bike, Star, Clock,
-  RefreshCw, CheckCircle,
+  RefreshCw, CheckCircle, Pencil,
   Navigation, Award, IndianRupee, Activity,
 } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -248,12 +248,20 @@ export default function DeliveryPersonDetailPage() {
             </div>
           </div>
         </div>
-        <button
-          onClick={fetchPerson}
-          className="inline-flex items-center px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-        >
-          <RefreshCw className="h-4 w-4 mr-1" /> Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.push(`/delivery-persons/${params.id}/edit`)}
+            className="inline-flex items-center px-3 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <Pencil className="h-4 w-4 mr-1" /> Edit
+          </button>
+          <button
+            onClick={fetchPerson}
+            className="inline-flex items-center px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <RefreshCw className="h-4 w-4 mr-1" /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Performance Metrics */}
