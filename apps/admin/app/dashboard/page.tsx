@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { LayoutDashboard, Package, ShoppingCart, Users, TrendingUp, AlertTriangle, Store } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Users, TrendingUp, AlertTriangle, Store, UserCheck, Navigation } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -79,12 +79,96 @@ export default function DashboardPage() {
         <StatsCard title="New Users Today" value={stats.newUsersToday} icon={<Users className="h-5 w-5" />} />
         <StatsCard title="All Time Orders" value={stats.totalOrders} icon={<ShoppingCart className="h-5 w-5" />} />
         <StatsCard title="Active Stores" value={stats.totalStores} icon={<Store className="h-5 w-5" />} />
+        <StatsCard title="Active Delivery" value={stats.activeDeliveryPersons} icon={<UserCheck className="h-5 w-5" />} />
+        <StatsCard title="Pending Delivery" value={stats.pendingDeliveries} icon={<Navigation className="h-5 w-5" />} />
       </div>
 
       {/* ── Low Stock Products Table ── */}
       <div className="mb-6">
         <LowStockTable storeId={storeId} refreshKey={lowStockRefresh} />
       </div>
+
+      {/* ── Delivery Activity Section ── */}
+      {data.recentDeliveryAssignments && data.recentDeliveryAssignments.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">
+              <span className="flex items-center gap-2">
+                <Navigation className="h-5 w-5 text-primary-600" />
+                Recent Delivery Activity
+              </span>
+            </h2>
+            <button
+              onClick={() => router.push("/delivery-persons")}
+              className="text-sm text-primary-600 hover:text-primary-800 font-medium"
+            >
+              View all →
+            </button>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Order</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Delivery Person</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Vehicle</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Assigned At</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {data.recentDeliveryAssignments.map((a: any) => (
+                  <tr
+                    key={a.id}
+                    onClick={() => router.push(`/orders/${a.orderId}`)}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-medium text-gray-900">{a.order?.orderNumber || "—"}</p>
+                      <p className="text-xs text-gray-400">
+                        {a.order?.createdAt ? new Date(a.order.createdAt).toLocaleDateString() : ""}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-full bg-primary-100 flex items-center justify-center">
+                          <span className="text-xs font-semibold text-primary-700">
+                            {a.deliveryPerson?.firstName?.charAt(0)}{a.deliveryPerson?.lastName?.charAt(0)}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {a.deliveryPerson?.firstName} {a.deliveryPerson?.lastName}
+                          </p>
+                          <p className="text-xs text-gray-400">{a.deliveryPerson?.phone}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-gray-600 capitalize">
+                        {a.deliveryPerson?.vehicleType?.toLowerCase() === "bike" ? "🏍️" : "🛵"} {a.deliveryPerson?.vehicleType?.toLowerCase()}
+                        {a.deliveryPerson?.vehicleNumber && (
+                          <span className="text-xs text-gray-400 ml-1">({a.deliveryPerson.vehicleNumber})</span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge variant={getStatusVariant(a.status)}>
+                        {a.status === "ASSIGNED" ? "Assigned" : a.status === "PICKED_UP" ? "Picked Up" : a.status === "IN_TRANSIT" ? "In Transit" : a.status === "DELIVERED" ? "Delivered" : a.status === "FAILED" ? "Failed" : a.status}
+                      </StatusBadge>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="text-sm text-gray-500">
+                        {a.assignedAt ? new Date(a.assignedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "—"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl border p-6">

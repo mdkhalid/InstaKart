@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useStoreStore } from "../../../web/stores/storeStore";
 import { Plus, Search, Phone, Bike, Star, Clock, Filter, RefreshCw, UserCheck, UserX, Navigation } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { StatusBadge } from "@/components/StatusBadge";
-import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/button";
 
 interface DeliveryPerson {
@@ -56,6 +56,7 @@ const VEHICLE_ICONS: Record<string, string> = {
 };
 
 export default function DeliveryPersonsPage() {
+  const router = useRouter();
   const { currentStore } = useStoreStore();
   const [persons, setPersons] = useState<DeliveryPerson[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
@@ -107,7 +108,6 @@ export default function DeliveryPersonsPage() {
   };
 
   return (
-    <AdminShell>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -270,7 +270,7 @@ export default function DeliveryPersonsPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
-                          onClick={() => toast.success(`View details for ${person.firstName} ${person.lastName}`)}
+                          onClick={() => router.push(`/delivery-persons/${person.id}`)}
                           className="text-xs text-primary-600 hover:text-primary-800 font-medium px-3 py-1.5 rounded-lg hover:bg-primary-50 transition-colors"
                         >
                           View
@@ -309,6 +309,5 @@ export default function DeliveryPersonsPage() {
           )}
         </div>
       </div>
-    </AdminShell>
   );
 }
