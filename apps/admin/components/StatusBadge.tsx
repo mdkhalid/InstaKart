@@ -26,8 +26,8 @@ export function StatusBadge({ className, variant = "default", ...props }: BadgeP
   );
 }
 
-export function getStatusVariant(status: string): string {
-  const map: Record<string, string> = {
+export function getStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" | "success" | "warning" {
+  const map: Record<string, "default" | "secondary" | "destructive" | "outline" | "success" | "warning"> = {
     PENDING: "warning",
     CONFIRMED: "default",
     PREPARING: "secondary",

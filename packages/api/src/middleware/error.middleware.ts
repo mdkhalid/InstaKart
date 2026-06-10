@@ -9,7 +9,7 @@ export const errorHandler = (
 ) => {
   logger.error("Unhandled error:", err);
 
-  if (err instanceof multerError) {
+  if (err.name === "MulterError") {
     return res.status(400).json({
       success: false,
       message: err.message,
@@ -32,10 +32,3 @@ export const errorHandler = (
     message,
   });
 };
-
-class multerError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "MulterError";
-  }
-}

@@ -78,7 +78,7 @@ export default function UsersPage() {
     {
       key: "role",
       label: "Role",
-      render: (v: string) => <StatusBadge variant={getStatusVariant(v) as any}>{v}</StatusBadge>,
+      render: (v: string) => <StatusBadge variant={getStatusVariant(v)}>{v}</StatusBadge>,
     },
     {
       key: "isActive",

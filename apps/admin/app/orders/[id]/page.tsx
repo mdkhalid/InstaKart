@@ -185,7 +185,7 @@ export default function AdminOrderDetailPage() {
         <div>
           <div className="flex items-center space-x-3">
             <h1 className="text-2xl font-bold text-gray-900">{order.orderNumber}</h1>
-            <StatusBadge variant={getStatusVariant(order.status) as any} className="text-sm px-3 py-1">
+            <StatusBadge variant={getStatusVariant(order.status)} className="text-sm px-3 py-1">
               {STATUS_LABELS[order.status] || order.status}
             </StatusBadge>
           </div>

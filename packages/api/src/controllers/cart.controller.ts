@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
-import { emitToAdmin } from "../services/socket.service";
 import { logger } from "../utils/logger";
 
 export const getCart = async (req: Request, res: Response) => {
@@ -289,6 +288,7 @@ async function getCartData(cartId: string) {
 
   const items = cart.items.map((item) => ({
     id: item.id,
+    cartId: item.cartId,
     productId: item.productId,
     quantity: item.quantity,
     price: Number(item.price),

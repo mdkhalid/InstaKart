@@ -51,7 +51,7 @@ export default function OrdersPage() {
       key: "status",
       label: "Status",
       render: (v: string) => (
-        <StatusBadge variant={getStatusVariant(v) as any}>{v}</StatusBadge>
+        <StatusBadge variant={getStatusVariant(v)}>{v}</StatusBadge>
       ),
     },
     {

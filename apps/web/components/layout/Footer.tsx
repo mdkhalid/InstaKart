@@ -1,4 +1,5 @@
 import { Package } from "lucide-react";
+import Link from "next/link";
 
 export function Footer() {
   return (
@@ -15,10 +16,9 @@ export function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-3">Quick Links</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="/" className="hover:text-white">Home</a></li>
-              <li><a href="/products" className="hover:text-white">Products</a></li>
-              <li><a href="/cart" className="hover:text-white">Cart</a></li>
-              <li><a href="/orders" className="hover:text-white">Orders</a></li>
+              <li><Link href="/" className="hover:text-white">Home</Link></li>
+              <li><Link href="/cart" className="hover:text-white">Cart</Link></li>
+              <li><Link href="/orders" className="hover:text-white">Orders</Link></li>
             </ul>
           </div>
           <div>

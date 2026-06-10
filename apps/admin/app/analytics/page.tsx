@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Eye, TrendingUp, Users, BarChart3 } from "lucide-react";
+import { Search, Eye, Users, BarChart3 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { StatsCard } from "@/components/StatsCard";
 import { formatPrice } from "@/lib/utils";

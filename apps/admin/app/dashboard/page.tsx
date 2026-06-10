@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { useRouter } from "next/navigation";
 import { StatsCard } from "@/components/StatsCard";
 import { StatusBadge, getStatusVariant } from "@/components/StatusBadge";
-import { formatPrice, formatDate } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 
@@ -73,7 +73,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-500">{order.user?.firstName} {order.user?.lastName}</p>
                   </div>
                   <div className="text-right">
-                    <StatusBadge variant={getStatusVariant(order.status) as any}>
+                    <StatusBadge variant={getStatusVariant(order.status)}>
                       {order.status}
                     </StatusBadge>
                     <p className="text-sm font-semibold mt-1">{formatPrice(Number(order.total))}</p>

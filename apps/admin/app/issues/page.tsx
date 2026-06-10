@@ -163,7 +163,7 @@ export default function IssuesPage() {
                     · {issue.order?.orderNumber}
                   </span>
                 </div>
-                <StatusBadge variant={getStatusVariant(issue.status) as any}>
+                <StatusBadge variant={getStatusVariant(issue.status)}>
                   {ISSUE_STATUS_LABELS[issue.status] || issue.status}
                 </StatusBadge>
               </div>

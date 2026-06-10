@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:20-bullseye-slim AS builder
 
 WORKDIR /app
 
@@ -12,9 +12,9 @@ RUN npm ci --workspaces --include-workspace-root
 
 COPY . .
 
-RUN npm run build --filter=@instamart/admin
+RUN npx turbo run build --filter=@instamart/admin
 
-FROM node:20-alpine AS runner
+FROM node:20-bullseye-slim AS runner
 
 WORKDIR /app
 

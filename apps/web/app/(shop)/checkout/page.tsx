@@ -7,7 +7,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from "@/lib/utils";
 import { useCartStore } from "@/stores/cartStore";
 import { useWishlistStore } from "@/stores/wishlistStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -178,7 +178,7 @@ export default function CheckoutPage() {
   const tomorrowSlots = timeSlots.filter((s) => s.day === "tomorrow");
 
   const discount = subtotal() - total();
-  const deliveryFee = subtotal() >= 499 ? 0 : 40;
+  const deliveryFee = subtotal() >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
   const grandTotal = total() + deliveryFee;
 
   return (

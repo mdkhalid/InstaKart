@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
-import { uploadImage, deleteImage } from "../services/upload.service";
+import { uploadImage } from "../services/upload.service";
 import { withCache, clearCache } from "../utils/cache";
 import { logger } from "../utils/logger";
 

@@ -256,7 +256,7 @@ export default function AdminUserDetailPage() {
               <h1 className="text-2xl font-bold text-gray-900">
                 {user.firstName} {user.lastName}
               </h1>
-              <StatusBadge variant={getStatusVariant(user.role) as any}>
+              <StatusBadge variant={getStatusVariant(user.role)}>
                 {user.role}
               </StatusBadge>
               <StatusBadge variant={user.isActive ? "success" : "destructive"}>
@@ -396,7 +396,7 @@ export default function AdminUserDetailPage() {
                     </div>
                     <div className="text-right flex items-center space-x-3">
                       <span className="text-sm font-semibold">{formatPrice(order.total)}</span>
-                      <StatusBadge variant={getStatusVariant(order.status) as any}>
+                      <StatusBadge variant={getStatusVariant(order.status)}>
                         {order.status}
                       </StatusBadge>
                     </div>

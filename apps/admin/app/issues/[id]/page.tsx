@@ -142,7 +142,7 @@ export default function IssueDetailPage() {
             </button>
           </p>
         </div>
-        <StatusBadge variant={getStatusVariant(issue.status) as any}>
+        <StatusBadge variant={getStatusVariant(issue.status)}>
           {issue.status}
         </StatusBadge>
       </div>

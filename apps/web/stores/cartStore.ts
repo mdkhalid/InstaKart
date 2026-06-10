@@ -263,6 +263,9 @@ export const useCartStore = create<CartState>()(
       itemCount: () =>
         get().items.reduce((sum, item) => sum + item.quantity, 0),
     }),
-    { name: "instamart-cart" }
+    {
+      name: "instamart-cart",
+      partialize: (state) => ({ items: state.items, coupon: state.coupon }),
+    }
   )
 );

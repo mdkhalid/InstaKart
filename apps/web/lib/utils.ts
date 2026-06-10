@@ -43,7 +43,7 @@ export function formatDate(date: string | Date): string {
 }
 
 export function formatDateTime(date: string | Date): string {
-  return new Date(date).toLocaleDateString("en-IN", {
+  return new Date(date).toLocaleString("en-IN", {
     year: "numeric",
     month: "short",
     day: "numeric",

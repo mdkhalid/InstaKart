@@ -167,7 +167,10 @@ export const updateAddress = async (req: Request, res: Response) => {
 
     const updated = await prisma.address.update({
       where: { id },
-      data: { label, street, city, state, pincode, landmark, lat, lng, isDefault: isDefault || false },
+      data: {
+        label, street, city, state, pincode, landmark, lat, lng,
+        isDefault: isDefault !== undefined ? isDefault : address.isDefault,
+      },
     });
 
     if (isDefault) {

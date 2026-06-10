@@ -141,9 +141,11 @@ export default function CategoriesPage() {
               className="border rounded-lg px-3 py-2 text-sm"
             >
               <option value="">No parent</option>
-              {categories.map((c: any) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+              {categories
+                .filter((c: any) => c.id !== editingCat?.id)
+                .map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
             </select>
             <input
               type="number"

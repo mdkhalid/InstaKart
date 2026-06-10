@@ -4,7 +4,7 @@ import { X, ShoppingCart, Percent, XCircle, Check } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { CartItem } from "./CartItem";
 import { Button } from "@/components/ui/button";
-import { formatPrice, FREE_DELIVERY_THRESHOLD } from "@/lib/utils";
+import { formatPrice, FREE_DELIVERY_THRESHOLD, DELIVERY_FEE } from "@/lib/utils";
 import Link from "next/link";
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -37,7 +37,7 @@ export function CartDrawer() {
   };
 
   const discount = subtotal - total;
-  const deliveryFee = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : 40;
+  const deliveryFee = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
 
   return (
     <>
@@ -83,7 +83,7 @@ export function CartDrawer() {
                 ) : (
                   <div className="flex items-center space-x-2">
                     <span className="text-green-600 text-sm">🎉</span>
-                    <p className="text-xs text-green-700 font-medium">You've got free delivery!</p>
+                    <p className="text-xs text-green-700 font-medium">You&apos;ve got free delivery!</p>
                   </div>
                 )}
               </div>

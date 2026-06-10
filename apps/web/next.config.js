@@ -13,7 +13,7 @@ const nextConfig = {
     return [
       {
         source: "/uploads/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL}/uploads/:path*`,
+        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/uploads/:path*`,
       },
     ];
   },

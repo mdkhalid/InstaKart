@@ -122,7 +122,7 @@ export const createOrder = async (req: Request, res: Response) => {
           tax,
           total,
           paymentMethod,
-          paymentStatus: paymentMethod === "COD" ? "UNPAID" : "UNPAID",
+          paymentStatus: "UNPAID",
           couponCode: couponCode || null,
           notes,
           estimatedDelivery,
