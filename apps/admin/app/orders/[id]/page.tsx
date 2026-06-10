@@ -4,11 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, Package, User, MapPin, CreditCard,
-  Clock, RefreshCw,
+  Clock, RefreshCw, Bike, Phone, Star,
 } from "lucide-react";
 import { StatusBadge, getStatusVariant } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useConfirm } from "@/hooks/useConfirm";
+import DeliveryAssignmentSection from "@/components/DeliveryAssignmentSection";
 import { formatPrice, formatDate } from "@/lib/utils";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -382,8 +383,9 @@ export default function AdminOrderDetailPage() {
                 <button
                   onClick={() => newStatus && handleStatusUpdate(newStatus)}
                   disabled={!newStatus || updating}
-                  className="w-full bg-primary-600 text-white py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors"
+                  className="w-full bg-primary-600 text-white py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors inline-flex items-center justify-center"
                 >
+                  {updating && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
                   {updating ? "Updating..." : `Update to ${newStatus ? (STATUS_LABELS[newStatus] || newStatus) : "..."}`}
                 </button>
               </div>
@@ -396,6 +398,9 @@ export default function AdminOrderDetailPage() {
               </div>
             )}
           </div>
+
+          {/* Delivery Assignment */}
+          <DeliveryAssignmentSection order={order} onRefresh={fetchOrder} />
 
           {/* Delivery Address */}
           <div className="bg-white rounded-xl border p-6">

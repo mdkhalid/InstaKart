@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useStoreStore } from "../../../web/stores/storeStore";
 import { Plus, Search, Phone, Bike, Star, Clock, Filter, RefreshCw, UserCheck, UserX, Navigation, ChevronDown } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
-import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 
 interface DeliveryPerson {
@@ -59,7 +57,6 @@ const STATUS_CYCLE = ["ACTIVE", "OFF_DUTY", "INACTIVE"];
 
 export default function DeliveryPersonsPage() {
   const router = useRouter();
-  const { currentStore } = useStoreStore();
   const [persons, setPersons] = useState<DeliveryPerson[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
@@ -68,6 +65,9 @@ export default function DeliveryPersonsPage() {
   const [typeFilter, setTypeFilter] = useState("");
   const [page, setPage] = useState(1);
   const [stats, setStats] = useState<any>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
 
   const fetchPersons = useCallback(async () => {
     setLoading(true);
@@ -103,14 +103,18 @@ export default function DeliveryPersonsPage() {
     fetchStats();
   }, [fetchStats]);
 
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-
-  // Close menu on any click outside — the menu div and toggle button both call stopPropagation
+  // Close menu on outside mousedown using ref-based detection
   useEffect(() => {
-    const handleClick = () => setOpenMenuId(null);
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+    const handleOutside = (e: MouseEvent) => {
+      if (!openMenuId) return;
+      const target = e.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target) && btnRef.current && !btnRef.current.contains(target)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [openMenuId]);
 
   const handleToggleStatus = async (id: string, newStatus: string) => {
     try {
@@ -287,10 +291,8 @@ export default function DeliveryPersonsPage() {
                         ) : (
                           <div className="relative">
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(openMenuId === person.id ? null : person.id);
-                              }}
+                              ref={openMenuId === person.id ? btnRef : undefined}
+                              onClick={() => setOpenMenuId(openMenuId === person.id ? null : person.id)}
                               className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[person.status] || "bg-gray-100 text-gray-700"} hover:opacity-80 transition-opacity cursor-pointer`}
                             >
                               {person.status === "OFF_DUTY" ? "Off Duty" : person.status.charAt(0) + person.status.slice(1).toLowerCase()}
@@ -298,7 +300,10 @@ export default function DeliveryPersonsPage() {
                             </button>
 
                             {openMenuId === person.id && (
-                              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-[130px]" onClick={(e) => e.stopPropagation()}>
+                              <div
+                                ref={menuRef}
+                                className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-[130px]"
+                              >
                                 {STATUS_CYCLE.map((status: string) => {
                                   const isCurrent = person.status === status;
                                   const label = status === "OFF_DUTY" ? "Off Duty" : status.charAt(0) + status.slice(1).toLowerCase();

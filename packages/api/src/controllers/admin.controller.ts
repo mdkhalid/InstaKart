@@ -262,7 +262,11 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
           create: { status, note: note || `Status updated to ${status}` },
         },
       },
-      include: { items: true, statusHistory: { orderBy: { createdAt: "asc" } } },
+      include: {
+        items: true,
+        store: { select: { id: true, name: true, slug: true } },
+        statusHistory: { orderBy: { createdAt: "asc" } },
+      },
     });
 
     // Emit socket events
@@ -311,6 +315,13 @@ export const getOrderDetail = async (req: Request, res: Response) => {
         store: { select: { id: true, name: true, slug: true } },
         items: true,
         statusHistory: { orderBy: { createdAt: "asc" } },
+        deliveryAssignment: {
+          include: {
+            deliveryPerson: {
+              select: { id: true, firstName: true, lastName: true, phone: true, vehicleType: true, vehicleNumber: true, rating: true },
+            },
+          },
+        },
       },
     });
 
