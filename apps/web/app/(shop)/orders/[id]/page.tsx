@@ -134,14 +134,15 @@ export default function OrderDetailPage() {
   const canCancel = ["PENDING", "CONFIRMED"].includes(order.status);
   const isDelivered = order.status === "DELIVERED";
 
-  // Compute the issue-reporting window client-side from order.deliveredAt.
-  // This is the source of truth for the UI. The server's canReportNew is a
-  // fallback used only if deliveredAt is missing from the order payload.
-  const deliveredAt: Date | null = order.deliveredAt
+  // Compute the issue-reporting window client-side from order.deliveredAt
+  // (or updatedAt as fallback, matching the server logic in getOrderIssues).
+  const deliveryTime: Date | null = order.deliveredAt
     ? new Date(order.deliveredAt)
+    : order.updatedAt
+    ? new Date(order.updatedAt)
     : null;
-  const windowExpiresAt: Date | null = deliveredAt
-    ? new Date(deliveredAt.getTime() + ISSUE_WINDOW_MINUTES * 60_000)
+  const windowExpiresAt: Date | null = deliveryTime
+    ? new Date(deliveryTime.getTime() + ISSUE_WINDOW_MINUTES * 60_000)
     : null;
   const clientCanReportNew =
     isDelivered && windowExpiresAt !== null && windowExpiresAt.getTime() > Date.now();
@@ -286,11 +287,11 @@ export default function OrderDetailPage() {
                     })}
                   </strong>{" "}
                   ({ISSUE_WINDOW_MINUTES} min after delivery
-                  {deliveredAt && (
+                  {deliveryTime && order.deliveredAt && (
                     <>
                       {" "}
                       · delivered at{" "}
-                      {deliveredAt.toLocaleTimeString("en-IN", {
+                      {deliveryTime.toLocaleTimeString("en-IN", {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
@@ -307,11 +308,11 @@ export default function OrderDetailPage() {
                 <div>
                   The {ISSUE_WINDOW_MINUTES}-minute issue reporting window has
                   closed
-                  {deliveredAt && (
+                  {deliveryTime && order.deliveredAt && (
                     <>
                       {" "}
                       (delivered at{" "}
-                      {deliveredAt.toLocaleTimeString("en-IN", {
+                      {deliveryTime.toLocaleTimeString("en-IN", {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}

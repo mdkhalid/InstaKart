@@ -15,6 +15,7 @@ import {
   LogOut,
   AlertCircle,
   Store,
+  Truck,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -31,6 +32,7 @@ const COMMON_ITEMS = [
   { href: "/products", label: "Products", icon: Package },
   { href: "/orders", label: "Orders", icon: ShoppingCart },
   { href: "/issues", label: "Issues & Refunds", icon: AlertCircle },
+  { href: "/delivery-persons", label: "Delivery", icon: Truck },
 ];
 
 export function Sidebar() {

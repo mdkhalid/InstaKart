@@ -144,6 +144,41 @@ async function main() {
   console.log(`  Store Admin 1: store-admin-mumbai@instamart.com / Store@123`);
   console.log(`  Store Admin 2: store-admin-delhi@instamart.com / Store@123`);
   console.log(`  Customer:      customer@example.com / Customer@123`);
+
+  // ── Create Delivery Persons ──
+  const deliveryPersons = [
+    { storeId: store1.id, firstName: "Rajesh", lastName: "Kumar", phone: "9876543211", type: "FULL_TIME" as const, vehicleType: "BIKE" as const, vehicleNumber: "MH-01-AB-1234", monthlySalary: 18000 },
+    { storeId: store1.id, firstName: "Suresh", lastName: "Patel", phone: "9876543212", type: "FULL_TIME" as const, vehicleType: "SCOOTER" as const, vehicleNumber: "MH-02-CD-5678", monthlySalary: 15000 },
+    { storeId: store1.id, firstName: "Amit", lastName: "Sharma", phone: "9876543213", type: "PART_TIME" as const, vehicleType: "BIKE" as const, hourlyRate: 120 },
+    { storeId: store2.id, firstName: "Vijay", lastName: "Singh", phone: "9876543214", type: "FULL_TIME" as const, vehicleType: "BIKE" as const, vehicleNumber: "DL-03-EF-9012", monthlySalary: 17000 },
+    { storeId: store2.id, firstName: "Ravi", lastName: "Verma", phone: "9876543215", type: "PART_TIME" as const, vehicleType: "SCOOTER" as const, hourlyRate: 110 },
+  ];
+
+  let dpCount = 0;
+  for (const dp of deliveryPersons) {
+    const existingDp = await prisma.deliveryPerson.findUnique({ where: { phone: dp.phone } });
+    if (!existingDp) {
+      await prisma.deliveryPerson.create({
+        data: {
+          storeId: dp.storeId,
+          firstName: dp.firstName,
+          lastName: dp.lastName,
+          phone: dp.phone,
+          type: dp.type,
+          vehicleType: dp.vehicleType,
+          vehicleNumber: dp.vehicleNumber,
+          hourlyRate: dp.hourlyRate || null,
+          monthlySalary: dp.monthlySalary || null,
+          rating: Number((4.5 + Math.random() * 0.5).toFixed(1)),
+          totalDeliveries: Math.floor(Math.random() * 500) + 50,
+        },
+      });
+      dpCount++;
+    }
+  }
+  if (dpCount > 0) {
+    console.log(`  ✅ Created ${dpCount} delivery persons`);
+  }
 }
 
 main()

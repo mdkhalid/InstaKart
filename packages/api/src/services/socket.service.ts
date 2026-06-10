@@ -38,8 +38,13 @@ export const initSocket = (httpServer: HttpServer) => {
     socket.join(`user:${userId}`);
 
     // Admin joins admin room
-    if (role === "ADMIN") {
+    if (role === "ADMIN" || role === "SUPER_ADMIN" || role === "STORE_ADMIN") {
       socket.join("admin");
+    }
+
+    // Delivery agent joins delivery room
+    if (role === "DELIVERY_AGENT") {
+      socket.join("delivery");
     }
 
     console.log(`Socket connected: user:${userId} (${role})`);
@@ -68,5 +73,12 @@ export const emitToUser = (userId: string, event: string, data: any) => {
 export const emitToAdmin = (event: string, data: any) => {
   if (io) {
     io.to("admin").emit(event, data);
+  }
+};
+
+// Helper to emit to delivery room
+export const emitToDelivery = (event: string, data: any) => {
+  if (io) {
+    io.to("delivery").emit(event, data);
   }
 };

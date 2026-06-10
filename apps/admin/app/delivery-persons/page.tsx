@@ -1,0 +1,314 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useStoreStore } from "../../../web/stores/storeStore";
+import { Plus, Search, Phone, Bike, Star, Clock, Filter, RefreshCw, UserCheck, UserX, Navigation } from "lucide-react";
+import api from "@/lib/api";
+import toast from "react-hot-toast";
+import { StatusBadge } from "@/components/StatusBadge";
+import { AdminShell } from "@/components/AdminShell";
+import { Button } from "@/components/ui/button";
+
+interface DeliveryPerson {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string | null;
+  employeeId: string | null;
+  type: string;
+  status: string;
+  vehicleType: string;
+  vehicleNumber: string | null;
+  hourlyRate: number | null;
+  monthlySalary: number | null;
+  rating: number;
+  totalDeliveries: number;
+  totalEarnings: number;
+  joinedAt: string;
+  _count: { assignments: number };
+}
+
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  ACTIVE: "bg-green-100 text-green-800",
+  ON_DELIVERY: "bg-blue-100 text-blue-800",
+  OFF_DUTY: "bg-gray-100 text-gray-600",
+  INACTIVE: "bg-red-100 text-red-800",
+};
+
+const TYPE_BADGES: Record<string, string> = {
+  FULL_TIME: "bg-purple-100 text-purple-700",
+  PART_TIME: "bg-amber-100 text-amber-700",
+};
+
+const VEHICLE_ICONS: Record<string, string> = {
+  BIKE: "🏍️",
+  SCOOTER: "🛵",
+  CAR: "🚗",
+  WALK: "🚶",
+};
+
+export default function DeliveryPersonsPage() {
+  const { currentStore } = useStoreStore();
+  const [persons, setPersons] = useState<DeliveryPerson[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [stats, setStats] = useState<any>(null);
+
+  const fetchPersons = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      if (search) params.set("search", search);
+      if (statusFilter) params.set("status", statusFilter);
+      if (typeFilter) params.set("type", typeFilter);
+
+      const { data } = await api.get(`/admin/delivery-persons?${params}`);
+      setPersons(data.data?.persons || []);
+      setPagination(data.data?.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 });
+    } catch {
+      toast.error("Failed to load delivery persons");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, search, statusFilter, typeFilter]);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const { data } = await api.get("/admin/delivery-persons/stats");
+      setStats(data.data);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    fetchPersons();
+  }, [fetchPersons]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+    fetchPersons();
+  };
+
+  return (
+    <AdminShell>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Delivery Persons</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage your delivery team</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={() => { fetchPersons(); fetchStats(); }}>
+              <RefreshCw className="h-4 w-4 mr-1" /> Refresh
+            </Button>
+            <Button size="sm" onClick={() => toast.success("Feature coming: Create delivery person form")}>
+              <Plus className="h-4 w-4 mr-1" /> Add Person
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        {stats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-500 font-medium uppercase">Total</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalPersons}</p>
+            </div>
+            <div className="bg-white rounded-xl border border-green-200 p-4">
+              <p className="text-xs text-green-600 font-medium uppercase flex items-center gap-1"><UserCheck className="h-3 w-3" /> Available</p>
+              <p className="text-2xl font-bold text-green-700 mt-1">{stats.activePersons}</p>
+            </div>
+            <div className="bg-white rounded-xl border border-blue-200 p-4">
+              <p className="text-xs text-blue-600 font-medium uppercase flex items-center gap-1"><Navigation className="h-3 w-3" /> On Delivery</p>
+              <p className="text-2xl font-bold text-blue-700 mt-1">{stats.onDelivery}</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-500 font-medium uppercase flex items-center gap-1"><Clock className="h-3 w-3" /> Off Duty</p>
+              <p className="text-2xl font-bold text-gray-700 mt-1">{stats.offDuty}</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-500 font-medium uppercase">Active Assignments</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.activeAssignments}</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-xs text-gray-500 font-medium uppercase">Today&apos;s Assignments</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.todayAssignments}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <form onSubmit={handleSearch} className="flex-1 min-w-[200px] max-w-sm">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by name, phone, or ID..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                />
+              </div>
+            </form>
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-primary-500"
+            >
+              <option value="">All Status</option>
+              <option value="ACTIVE">Active</option>
+              <option value="ON_DELIVERY">On Delivery</option>
+              <option value="OFF_DUTY">Off Duty</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
+            <select
+              value={typeFilter}
+              onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-primary-500"
+            >
+              <option value="">All Types</option>
+              <option value="FULL_TIME">Full Time</option>
+              <option value="PART_TIME">Part Time</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Name</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Phone</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Type</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Vehicle</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase">Rating</th>
+                  <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase">Deliveries</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-500">Loading...</td>
+                  </tr>
+                ) : persons.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-500">No delivery persons found</td>
+                  </tr>
+                ) : (
+                  persons.map((person) => (
+                    <tr key={person.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">
+                            <span className="text-xs font-semibold text-primary-700">
+                              {person.firstName.charAt(0)}{person.lastName.charAt(0)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{person.firstName} {person.lastName}</p>
+                            {person.employeeId && (
+                              <p className="text-xs text-gray-400">ID: {person.employeeId}</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                          <Phone className="h-3 w-3" />
+                          {person.phone}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${TYPE_BADGES[person.type] || "bg-gray-100 text-gray-700"}`}>
+                          {person.type === "FULL_TIME" ? "Full Time" : "Part Time"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                          <span>{VEHICLE_ICONS[person.vehicleType] || "🚲"}</span>
+                          <span className="capitalize">{person.vehicleType?.toLowerCase()}</span>
+                          {person.vehicleNumber && <span className="text-xs text-gray-400">({person.vehicleNumber})</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[person.status] || "bg-gray-100 text-gray-700"}`}>
+                          {person.status === "ON_DELIVERY" ? "On Delivery" : person.status.charAt(0) + person.status.slice(1).toLowerCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1 text-sm">
+                          <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+                          <span className="font-medium">{person.rating.toFixed(1)}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm text-gray-700 font-medium">
+                        {person.totalDeliveries}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => toast.success(`View details for ${person.firstName} ${person.lastName}`)}
+                          className="text-xs text-primary-600 hover:text-primary-800 font-medium px-3 py-1.5 rounded-lg hover:bg-primary-50 transition-colors"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+              <p className="text-xs text-gray-500">
+                Showing {(pagination.page - 1) * pagination.limit + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
+              </p>
+              <div className="flex gap-1">
+                <button
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={page >= pagination.totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </AdminShell>
+  );
+}

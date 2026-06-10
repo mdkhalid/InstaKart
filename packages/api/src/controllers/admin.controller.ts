@@ -44,6 +44,8 @@ export const getDashboard = async (req: Request, res: Response) => {
       topProducts,
       dailyRevenue,
       totalStores,
+      activeDeliveryPersons,
+      pendingDeliveries,
     ] = await Promise.all([
       prisma.order.aggregate({
         _sum: { total: true },
@@ -90,6 +92,8 @@ export const getDashboard = async (req: Request, res: Response) => {
         ...(storeId ? [storeId] : [])
       ),
       storeId ? 1 : prisma.store.count({ where: { isActive: true } }),
+      prisma.deliveryPerson.count({ where: storeId ? { storeId, status: { notIn: ["INACTIVE"] } } : { status: { notIn: ["INACTIVE"] } } }),
+      prisma.deliveryAssignment.count({ where: { status: { notIn: ["DELIVERED", "FAILED"] }, deliveryPerson: storeId ? { storeId } : {} } }),
     ]);
 
     // Build a complete 30-day chart (fill in missing days with 0)
@@ -118,6 +122,8 @@ export const getDashboard = async (req: Request, res: Response) => {
         totalUsers,
         newUsersToday,
         totalStores,
+        activeDeliveryPersons,
+        pendingDeliveries,
       },
       recentOrders: recentOrders.map((o) => ({
         ...o,

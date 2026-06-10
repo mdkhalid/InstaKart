@@ -73,6 +73,33 @@ enum RefundMethod {
   ORIGINAL
 }
 
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+}
+
+enum DeliveryPersonStatus {
+  ACTIVE
+  INACTIVE
+  ON_DELIVERY
+  OFF_DUTY
+}
+
+enum VehicleType {
+  BIKE
+  SCOOTER
+  CAR
+  WALK
+}
+
+enum AssignmentStatus {
+  ASSIGNED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+}
+
 // ─────────────────────── MODELS ───────────────────────
 
 model Store {
@@ -99,6 +126,7 @@ model Store {
   admins           User[]
   carts            Cart[]
   orders           Order[]
+  deliveryPersons  DeliveryPerson[]
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -356,6 +384,7 @@ model Order {
 
   statusHistory      OrderStatusHistory[]
   issues             OrderIssue[]
+  deliveryAssignment DeliveryAssignment?
 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -492,6 +521,97 @@ model TrackingEvent {
   @@index([userId, createdAt])
   @@index([visitorId, createdAt])
   @@index([eventType, createdAt])
+}
+
+model DeliveryPerson {
+  id                String               @id @default(cuid())
+  storeId           String
+  store             Store                @relation(fields: [storeId], references: [id])
+
+  // Personal
+  firstName         String
+  lastName          String
+  phone             String               @unique
+  email             String?
+  avatarUrl         String?
+
+  // Employment
+  employeeId        String?              @unique // Internal HR ID
+  type              EmploymentType       @default(FULL_TIME)
+  status            DeliveryPersonStatus @default(ACTIVE)
+  hourlyRate        Decimal?             @db.Decimal(10, 2) // For part-time
+  monthlySalary     Decimal?             @db.Decimal(10, 2) // For full-time
+  joinedAt          DateTime             @default(now())
+
+  // Vehicle
+  vehicleType       VehicleType          @default(BIKE)
+  vehicleNumber     String?
+
+  // Live location (updated frequently by the delivery app)
+  currentLat        Float?
+  currentLng        Float?
+  lastLocationAt    DateTime?
+
+  // Performance
+  rating            Float                @default(5.0)
+  totalDeliveries   Int                  @default(0)
+  totalEarnings     Decimal              @db.Decimal(12, 2) @default(0)
+
+  assignments       DeliveryAssignment[]
+  activityLogs      DeliveryActivity[]
+
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@index([storeId, status])
+  @@index([storeId, type])
+  @@index([status])
+  @@index([currentLat, currentLng]) // For spatial proximity queries
+}
+
+model DeliveryAssignment {
+  id                String           @id @default(cuid())
+  deliveryPersonId  String
+  deliveryPerson    DeliveryPerson   @relation(fields: [deliveryPersonId], references: [id])
+  orderId           String            @unique
+  order             Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  status            AssignmentStatus @default(ASSIGNED)
+
+  assignedAt        DateTime         @default(now())
+  pickedUpAt        DateTime?
+  deliveredAt       DateTime?
+  failedAt          DateTime?
+
+  notes             String?
+  distanceKm        Float?           // Actual distance covered
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  @@index([deliveryPersonId, status])
+  @@index([status, assignedAt])
+}
+
+model DeliveryActivity {
+  id                String   @id @default(cuid())
+  deliveryPersonId  String
+  deliveryPerson    DeliveryPerson @relation(fields: [deliveryPersonId], references: [id])
+  date              DateTime @db.Date
+
+  ordersAssigned    Int      @default(0)
+  ordersCompleted   Int      @default(0)
+  ordersFailed      Int      @default(0)
+  earnings          Decimal  @db.Decimal(12, 2) @default(0)
+  distanceKm        Float    @default(0)
+  startTime         DateTime?
+  endTime           DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([deliveryPersonId, date])
+  @@index([deliveryPersonId, date])
+  @@index([date])
 }
 
 model OrderIssue {

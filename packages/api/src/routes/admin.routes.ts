@@ -11,6 +11,12 @@ import {
   getLowStockProducts,
 } from "../controllers/admin.controller";
 import { getAllIssues, getIssueDetail, resolveIssue } from "../controllers/issue.controller";
+import {
+  listDeliveryPersons, getDeliveryPerson, createDeliveryPerson, updateDeliveryPerson,
+  toggleDeliveryPersonStatus, getAvailableDeliveryPersons,
+  assignDeliveryPerson, updateAssignmentStatus,
+  getDeliveryPersonActivity, getDeliveryStats,
+} from "../controllers/delivery.controller";
 
 const router = Router();
 
@@ -44,5 +50,19 @@ router.get("/coupons", requireSuperAdmin, getCoupons);
 router.post("/coupons", requireSuperAdmin, createCoupon);
 router.put("/coupons/:id", requireSuperAdmin, updateCoupon);
 router.delete("/coupons/:id", requireSuperAdmin, deleteCoupon);
+
+// ── Delivery Management (store-scoped) ──
+router.get("/delivery-persons", listDeliveryPersons);
+router.get("/delivery-persons/available", getAvailableDeliveryPersons);
+router.get("/delivery-persons/stats", getDeliveryStats);
+router.get("/delivery-persons/:id", getDeliveryPerson);
+router.post("/delivery-persons", createDeliveryPerson);
+router.put("/delivery-persons/:id", updateDeliveryPerson);
+router.put("/delivery-persons/:id/status", toggleDeliveryPersonStatus);
+router.get("/delivery-persons/:id/activity", getDeliveryPersonActivity);
+
+// ── Delivery Assignments ──
+router.post("/orders/:id/assign-delivery", assignDeliveryPerson);
+router.put("/delivery-assignments/:id/status", updateAssignmentStatus);
 
 export default router;

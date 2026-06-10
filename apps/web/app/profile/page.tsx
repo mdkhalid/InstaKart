@@ -74,15 +74,28 @@ export default function ProfilePage() {
     }
   };
 
+  const [savingAddress, setSavingAddress] = useState(false);
+
   const handleAddAddress = async () => {
+    // Validate required fields
+    if (!addressForm.street.trim()) { toast.error("Street address is required"); return; }
+    if (!addressForm.city.trim()) { toast.error("City is required"); return; }
+    if (!addressForm.state.trim()) { toast.error("State is required"); return; }
+    if (!addressForm.pincode.trim() || addressForm.pincode.length < 5) { toast.error("Valid pincode is required"); return; }
+
+    setSavingAddress(true);
     try {
-      await api.post("/users/addresses", addressForm);
-      toast.success("Address added");
+      const { data } = await api.post("/users/addresses", addressForm);
+      toast.success(data?.message || "Address added");
       setShowAddressForm(false);
       setAddressForm({ label: "Home", street: "", city: "", state: "", pincode: "", isDefault: false });
       fetchAddresses();
-    } catch {
-      toast.error("Failed to add address");
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || "Failed to add address";
+      toast.error(msg);
+      console.error("Add address error:", err.response?.data || err);
+    } finally {
+      setSavingAddress(false);
     }
   };
 
@@ -418,7 +431,7 @@ export default function ProfilePage() {
             />
             <span>Set as default address</span>
           </label>
-          <Button className="w-full" onClick={handleAddAddress}>Save Address</Button>
+          <Button className="w-full" onClick={handleAddAddress} loading={savingAddress}>Save Address</Button>
         </div>
       </Dialog>
       <Footer />
