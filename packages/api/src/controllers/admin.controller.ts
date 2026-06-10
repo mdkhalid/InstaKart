@@ -4,6 +4,8 @@ import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { emitToUser } from "../services/socket.service";
 import { uploadImage } from "../services/upload.service";
+import { getLowStockItems } from "../services/lowStock.service";
+import { getEffectiveStoreId } from "../middleware/auth.middleware";
 import { logger } from "../utils/logger";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -17,12 +19,17 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 };
 
 // Dashboard
-export const getDashboard = async (_req: Request, res: Response) => {
+export const getDashboard = async (req: Request, res: Response) => {
   try {
+    const storeId = getEffectiveStoreId(req);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Build store-scoped where clause
+    const orderWhere: any = {};
+    if (storeId) orderWhere.storeId = storeId;
 
     // Run all independent queries in parallel via Prisma
     const [
@@ -31,7 +38,6 @@ export const getDashboard = async (_req: Request, res: Response) => {
       totalOrders,
       pendingOrders,
       totalProducts,
-      lowStockProducts,
       totalUsers,
       newUsersToday,
       recentOrders,
@@ -41,19 +47,27 @@ export const getDashboard = async (_req: Request, res: Response) => {
     ] = await Promise.all([
       prisma.order.aggregate({
         _sum: { total: true },
-        where: { paymentStatus: "PAID" },
+        where: { paymentStatus: "PAID", ...orderWhere },
       }),
       prisma.order.aggregate({
         _sum: { total: true },
-        where: { paymentStatus: "PAID", createdAt: { gte: today } },
+        where: { paymentStatus: "PAID", createdAt: { gte: today }, ...orderWhere },
       }),
-      prisma.order.count(),
-      prisma.order.count({ where: { status: { in: ["PENDING", "CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY"] } } }),
-      prisma.product.count({ where: { isActive: true } }),
-      prisma.product.count({ where: { isActive: true, stock: { lte: 10 } } }),
+      prisma.order.count({ where: { ...orderWhere } }),
+      prisma.order.count({
+        where: {
+          status: { in: ["PENDING", "CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY"] },
+          ...orderWhere,
+        },
+      }),
+      // Products: if store-scoped, count products that have StoreProduct in that store
+      storeId
+        ? prisma.storeProduct.count({ where: { storeId } })
+        : prisma.product.count({ where: { isActive: true } }),
       prisma.user.count({ where: { isActive: true } }),
       prisma.user.count({ where: { createdAt: { gte: today } } }),
       prisma.order.findMany({
+        where: orderWhere,
         take: 10,
         orderBy: { createdAt: "desc" },
         include: { user: { select: { firstName: true, lastName: true, email: true } } },
@@ -63,18 +77,19 @@ export const getDashboard = async (_req: Request, res: Response) => {
         _sum: { quantity: true },
         orderBy: { _sum: { quantity: "desc" } },
         take: 5,
-      }),
-      // Revenue chart - aggregate by day in SQL (much faster than JS loop)
-      // Note: Prisma uses camelCase column names by default
+        ...(storeId ? { where: { order: { storeId } } } : {}),
+      } as any),
+      // Revenue chart - aggregate by day in SQL
       prisma.$queryRawUnsafe<Array<{ date: string; revenue: number }>>(
         `SELECT DATE("createdAt") as date, COALESCE(SUM("total"), 0) as revenue
          FROM "Order"
-         WHERE "paymentStatus" = 'PAID' AND "createdAt" >= $1
+         WHERE "paymentStatus" = 'PAID' AND "createdAt" >= $1${storeId ? ` AND "storeId" = $2` : ""}
          GROUP BY DATE("createdAt")
          ORDER BY date ASC`,
-        thirtyDaysAgo
+        thirtyDaysAgo,
+        ...(storeId ? [storeId] : [])
       ),
-      prisma.store.count({ where: { isActive: true } }),
+      storeId ? 1 : prisma.store.count({ where: { isActive: true } }),
     ]);
 
     // Build a complete 30-day chart (fill in missing days with 0)
@@ -99,7 +114,7 @@ export const getDashboard = async (_req: Request, res: Response) => {
         totalOrders,
         pendingOrders,
         totalProducts,
-        lowStockProducts,
+        lowStockProducts: 0,
         totalUsers,
         newUsersToday,
         totalStores,
@@ -127,11 +142,12 @@ export const getAllOrders = async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const skip = (page - 1) * limit;
-    const { status, search, storeId } = req.query;
+    const { status, search } = req.query;
+    const storeId = getEffectiveStoreId(req);
 
     const where: any = {};
     if (status) where.status = status;
-    if (storeId) where.storeId = storeId as string;
+    if (storeId) where.storeId = storeId;
     if (search) {
       where.OR = [
         { orderNumber: { contains: search as string, mode: "insensitive" } },
@@ -186,6 +202,11 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
     });
 
     if (!order) return errorResponse(res, "Order not found", 404);
+
+    // STORE_ADMIN can only manage orders from their own store
+    if (req.user?.role === "STORE_ADMIN" && order.storeId !== req.user.storeId) {
+      return errorResponse(res, "You can only manage orders from your store", 403);
+    }
 
     const allowedTransitions = VALID_TRANSITIONS[order.status];
     if (!allowedTransitions || !allowedTransitions.includes(status)) {
@@ -274,6 +295,11 @@ export const getOrderDetail = async (req: Request, res: Response) => {
     });
 
     if (!order) return errorResponse(res, "Order not found", 404);
+
+    // STORE_ADMIN can only view orders from their own store
+    if (req.user?.role === "STORE_ADMIN" && order.storeId !== req.user.storeId) {
+      return errorResponse(res, "Order not found", 404);
+    }
 
     return successResponse(res, {
       ...order,
@@ -366,7 +392,7 @@ export const changeUserRole = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { role } = req.body;
 
-    if (!["CUSTOMER", "ADMIN", "DELIVERY_AGENT"].includes(role)) {
+    if (!["CUSTOMER", "ADMIN", "SUPER_ADMIN", "STORE_ADMIN", "DELIVERY_AGENT"].includes(role)) {
       return errorResponse(res, "Invalid role", 400);
     }
 
@@ -724,7 +750,8 @@ export const adminListProducts = async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
     const skip = (page - 1) * limit;
-    const { search, categoryId, isActive, storeId } = req.query;
+    const { search, categoryId, isActive } = req.query;
+    const storeId = getEffectiveStoreId(req);
 
     const where: any = {};
     if (search) {
@@ -747,6 +774,11 @@ export const adminListProducts = async (req: Request, res: Response) => {
       includeClause.storeProducts = {
         where: { storeId: storeId as string },
         select: { price: true, salePrice: true, costPrice: true, stock: true, lowStockAlert: true, isAvailable: true },
+      };
+    } else {
+      // Include all store product associations (used by edit page)
+      includeClause.storeProducts = {
+        select: { storeId: true, price: true, salePrice: true, costPrice: true, stock: true, lowStockAlert: true, isAvailable: true },
       };
     }
 
@@ -788,7 +820,7 @@ export const adminListProducts = async (req: Request, res: Response) => {
 export const adminGetProduct = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { storeId } = req.query;
+    const storeId = getEffectiveStoreId(req);
 
     const includeClause: any = {
       category: { select: { id: true, name: true, slug: true } },
@@ -798,8 +830,13 @@ export const adminGetProduct = async (req: Request, res: Response) => {
 
     if (storeId) {
       includeClause.storeProducts = {
-        where: { storeId: storeId as string },
+        where: { storeId },
         select: { price: true, salePrice: true, costPrice: true, stock: true, lowStockAlert: true, isAvailable: true },
+      };
+    } else {
+      // Include all store product associations (used by edit page)
+      includeClause.storeProducts = {
+        select: { storeId: true, price: true, salePrice: true, costPrice: true, stock: true, lowStockAlert: true, isAvailable: true },
       };
     }
 
@@ -809,7 +846,7 @@ export const adminGetProduct = async (req: Request, res: Response) => {
     });
     if (!product) return errorResponse(res, "Product not found", 404);
 
-    const sp = storeId ? product.storeProducts?.[0] : null;
+      const sp = storeId ? product.storeProducts?.[0] : null;
 
     return successResponse(res, {
       ...product,
@@ -823,5 +860,18 @@ export const adminGetProduct = async (req: Request, res: Response) => {
   } catch (error) {
     logger.error("Admin get product error:", error);
     return errorResponse(res, "Failed to get product", 500);
+  }
+};
+
+// ─────────────────────── Low Stock ───────────────────────
+
+export const getLowStockProducts = async (req: Request, res: Response) => {
+  try {
+    const storeId = getEffectiveStoreId(req);
+    const items = await getLowStockItems(storeId);
+    return successResponse(res, items);
+  } catch (error) {
+    logger.error("Get low stock products error:", error);
+    return errorResponse(res, "Failed to get low stock products", 500);
   }
 };

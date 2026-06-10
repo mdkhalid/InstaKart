@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, requireAdmin } from "../middleware/auth.middleware";
+import { authenticate, requireAdmin, requireSuperAdmin } from "../middleware/auth.middleware";
 import { validate } from "../middleware/validate.middleware";
 import { createStoreSchema, updateStoreSchema, setStoreProductSchema } from "../validators/store.validator";
 import {
@@ -16,12 +16,12 @@ router.get("/", listStores);
 router.get("/:id", getStore);
 router.get("/:id/verify", verifyStoreServes);
 
-// Admin routes
-router.post("/", authenticate, requireAdmin, validate(createStoreSchema), createStore);
-router.put("/:id", authenticate, requireAdmin, validate(updateStoreSchema), updateStore);
-router.delete("/:id", authenticate, requireAdmin, deleteStore);
+// Super-admin-only routes (CRUD stores)
+router.post("/", authenticate, requireSuperAdmin, validate(createStoreSchema), createStore);
+router.put("/:id", authenticate, requireSuperAdmin, validate(updateStoreSchema), updateStore);
+router.delete("/:id", authenticate, requireSuperAdmin, deleteStore);
 
-// Admin: store product inventory
+// Admin: store product inventory (accessible by store admins too)
 router.get("/:id/products", authenticate, requireAdmin, getStoreProducts);
 router.post("/products", authenticate, requireAdmin, validate(setStoreProductSchema), setStoreProducts);
 

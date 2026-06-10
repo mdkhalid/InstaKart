@@ -1,21 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { CategorySelect } from "@/components/CategorySelect";
 import { ImageUploader, type ProductImage } from "@/components/ImageUploader";
+import { StoreProductManager, type StoreProductForm } from "@/components/StoreProductManager";
 import { PRODUCT_UNITS } from "@instamart/types";
-
-type StoreProductForm = {
-  storeId: string;
-  price: string;
-  salePrice: string;
-  stock: string;
-  lowStockAlert: string;
-  isAvailable: boolean;
-};
 
 type ProductForm = {
   name: string;
@@ -42,6 +34,7 @@ const EMPTY: ProductForm = {
   description: "",
   shortDesc: "",
   isFeatured: false,
+  storeProducts: [],
 };
 
 export default function NewProductPage() {
@@ -62,6 +55,18 @@ export default function NewProductPage() {
     }
     setSaving(true);
     try {
+      // Build store products payload (only stores marked as available)
+      const storeProducts = form.storeProducts
+        .filter((sp) => sp.isAvailable && sp.price)
+        .map((sp) => ({
+          storeId: sp.storeId,
+          price: parseFloat(sp.price),
+          salePrice: sp.salePrice ? parseFloat(sp.salePrice) : null,
+          stock: parseInt(sp.stock || "0", 10),
+          lowStockAlert: parseInt(sp.lowStockAlert || "10", 10),
+          isAvailable: true,
+        }));
+
       const { data } = await api.post("/products", {
         name: form.name,
         sku: form.sku,
@@ -74,6 +79,7 @@ export default function NewProductPage() {
         shortDesc: form.shortDesc || undefined,
         isFeatured: form.isFeatured,
         tags: [],
+        storeProducts: storeProducts.length > 0 ? storeProducts : undefined,
       });
       const productId = data?.data?.id;
 
@@ -206,6 +212,11 @@ export default function NewProductPage() {
         <div className="border-t pt-4">
           <ImageUploader images={images} onChange={setImages} maxFiles={10} />
         </div>
+
+        <StoreProductManager
+          value={form.storeProducts}
+          onChange={(storeProducts) => setForm({ ...form, storeProducts })}
+        />
 
         <div className="flex items-center space-x-2">
           <input

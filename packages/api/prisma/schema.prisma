@@ -22,6 +22,8 @@ enum DayOfWeek {
 enum Role {
   CUSTOMER
   ADMIN
+  SUPER_ADMIN
+  STORE_ADMIN
   DELIVERY_AGENT
 }
 
@@ -94,6 +96,7 @@ model Store {
   minOrderAmount   Decimal  @db.Decimal(10, 2) @default(0)
 
   storeProducts    StoreProduct[]
+  admins           User[]
   carts            Cart[]
   orders           Order[]
 
@@ -141,6 +144,10 @@ model User {
 
   defaultAddressId String?
 
+  // Store admin assignment (only for STORE_ADMIN role)
+  storeId          String?
+  store            Store?    @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
   addresses        Address[]
   orders           Order[]
   cart             Cart?
@@ -156,6 +163,8 @@ model User {
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
+  @@index([storeId])
 }
 
 model Address {

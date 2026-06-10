@@ -41,7 +41,7 @@ async function main() {
       passwordHash: await bcrypt.hash("Admin@123", 12),
       firstName: "Super",
       lastName: "Admin",
-      role: "ADMIN",
+      role: "SUPER_ADMIN",
       isEmailVerified: true,
     },
   });

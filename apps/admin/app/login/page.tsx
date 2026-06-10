@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Package } from "lucide-react";
+import { Package, Store } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
+
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "STORE_ADMIN"];
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -17,14 +19,19 @@ export default function AdminLoginPage() {
     setLoading(true);
     try {
       const { data } = await api.post("/auth/login", { email, password });
-      if (data.data?.user?.role !== "ADMIN") {
+      const user = data.data?.user;
+      if (!user || !ADMIN_ROLES.includes(user.role)) {
         toast.error("Admin access required");
         setLoading(false);
         return;
       }
       localStorage.setItem("accessToken", data.data.accessToken);
-      localStorage.setItem("adminUser", JSON.stringify(data.data.user));
-      toast.success("Welcome Admin!");
+      localStorage.setItem("adminUser", JSON.stringify(user));
+
+      const label = user.role === "STORE_ADMIN"
+        ? `Welcome Store Admin!`
+        : "Welcome Admin!";
+      toast.success(label);
       router.push("/dashboard");
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Login failed");

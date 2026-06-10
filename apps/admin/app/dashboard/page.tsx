@@ -4,18 +4,37 @@ import { useEffect, useState, useCallback } from "react";
 import { LayoutDashboard, Package, ShoppingCart, Users, TrendingUp, AlertTriangle, Store } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { StatsCard } from "@/components/StatsCard";
 import { StatusBadge, getStatusVariant } from "@/components/StatusBadge";
 import { StoreFilter } from "@/components/StoreFilter";
 import { formatPrice } from "@/lib/utils";
+import { useAdminSocket } from "@/hooks/useAdminSocket";
+import { LowStockTable } from "./components/LowStockTable";
 import api from "@/lib/api";
-import toast from "react-hot-toast";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [storeId, setStoreId] = useState("");
+  const [lowStockRefresh, setLowStockRefresh] = useState(0);
+
+  // ── Real-time socket notifications ──
+  useAdminSocket({
+    onLowStock: (alert) => {
+      const count = alert.items.length;
+      toast(
+        `⚠️ ${count} product(s) running low${alert.storeId ? " in selected store" : ""}`,
+        { icon: "⚠️", duration: 5000 }
+      );
+      setLowStockRefresh((n) => n + 1);
+    },
+    onNewOrder: () => {
+      toast.success("New order received!");
+      fetchDashboard();
+    },
+  });
 
   const fetchDashboard = useCallback(async () => {
     setLoading(true);
@@ -56,10 +75,15 @@ export default function DashboardPage() {
         <StatsCard title="Today Revenue" value={formatPrice(stats.todayRevenue)} icon={<TrendingUp className="h-5 w-5" />} />
         <StatsCard title="Pending Orders" value={stats.pendingOrders} icon={<ShoppingCart className="h-5 w-5" />} />
         <StatsCard title="Total Products" value={stats.totalProducts} icon={<Package className="h-5 w-5" />} />
-        <StatsCard title="Low Stock Items" value={stats.lowStockProducts} icon={<AlertTriangle className="h-5 w-5" />} />
         <StatsCard title="Total Users" value={stats.totalUsers} icon={<Users className="h-5 w-5" />} />
         <StatsCard title="New Users Today" value={stats.newUsersToday} icon={<Users className="h-5 w-5" />} />
         <StatsCard title="All Time Orders" value={stats.totalOrders} icon={<ShoppingCart className="h-5 w-5" />} />
+        <StatsCard title="Active Stores" value={stats.totalStores} icon={<Store className="h-5 w-5" />} />
+      </div>
+
+      {/* ── Low Stock Products Table ── */}
+      <div className="mb-6">
+        <LowStockTable storeId={storeId} refreshKey={lowStockRefresh} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

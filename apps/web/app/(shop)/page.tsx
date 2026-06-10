@@ -130,7 +130,8 @@ export default function HomePage() {
 
   const { notServiceable, loading: storeDetecting } = useStoreStore();
 
-  if (storeDetecting && !currentStore) {
+  // Show loading only during initial detection (before we know if serviceable or not)
+  if (storeDetecting && !currentStore && !notServiceable) {
     return (
       <>
         <Navbar />
@@ -144,38 +145,29 @@ export default function HomePage() {
     );
   }
 
-  if (notServiceable || !currentStore) {
-    return (
-      <>
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center px-4">
-          <div className="text-center max-w-md">
-            <div className="h-24 w-24 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-6">
-              <span className="text-4xl">🚚</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">We\'re not in your area yet</h1>
-            <p className="text-gray-600 mb-6">
-              We\'re expanding fast! Enter your pincode to check if we deliver to you,
-              or let us know where you\'d like us to launch next.
-            </p>
-            <button
-              onClick={() => window.location.href = "/"}
-              className="bg-primary-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary-700 transition-colors"
-            >
-              Check Again
-            </button>
-          </div>
-        </main>
-      </>
-    );
-  }
-
   return (
     <>
       <Navbar />
       <main className="flex-1 pb-20 md:pb-0">
+        {/* Not serviceable banner */}
+        {notServiceable && (
+          <section className="sticky top-16 z-30 bg-amber-50 border-b border-amber-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm text-amber-800">
+                <span className="text-lg" role="img" aria-label="truck">🚚</span>
+                <span>We don&apos;t deliver to your area yet — we&apos;re expanding soon!</span>
+              </div>
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent("open-pincode-input"))}
+                className="flex-shrink-0 text-xs font-medium text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Change pincode
+              </button>
+            </div>
+          </section>
+        )}
         {/* Compact search bar (Blinkit-style, sticks below navbar) */}
-        <section className="sticky top-16 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100">
+        <section className={cn("sticky top-16 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100", notServiceable && "top-[121px]")}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <form
               onSubmit={handleSearch}
@@ -219,7 +211,7 @@ export default function HomePage() {
 
         {/* Category Pills (sticky) */}
         {topCategories.length > 0 && (
-          <section className="sticky top-[112px] sm:top-[108px] z-20 bg-white border-b border-gray-100">
+          <section className={cn("sticky z-20 bg-white border-b border-gray-100", notServiceable ? "top-[169px] sm:top-[165px]" : "top-[112px] sm:top-[108px]")}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <CategoryPills
                 categories={topCategories}

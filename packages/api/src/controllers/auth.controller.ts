@@ -60,7 +60,12 @@ export const login = async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, email: true, firstName: true, lastName: true, role: true, avatarUrl: true, passwordHash: true, isEmailVerified: true, isActive: true, createdAt: true },
+      select: {
+        id: true, email: true, firstName: true, lastName: true, role: true,
+        avatarUrl: true, passwordHash: true, isEmailVerified: true, isActive: true,
+        storeId: true,
+        createdAt: true,
+      },
     });
 
     if (!user || !user.isActive) {
@@ -72,7 +77,7 @@ export const login = async (req: Request, res: Response) => {
       return errorResponse(res, "Invalid credentials", 401);
     }
 
-    const accessToken = signAccessToken(user.id, user.role);
+    const accessToken = signAccessToken(user.id, user.role, user.storeId);
     const refreshToken = signRefreshToken(user.id);
 
     await prisma.refreshToken.create({

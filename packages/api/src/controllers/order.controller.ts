@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { emitToAdmin, emitToUser } from "../services/socket.service";
 import { sendOrderConfirmationEmail } from "../services/email.service";
+import { checkAndNotifyLowStock } from "../services/lowStock.service";
 import { logger } from "../utils/logger";
 
 const FREE_DELIVERY_THRESHOLD = Number(process.env.FREE_DELIVERY_THRESHOLD) || 499;
@@ -217,6 +218,9 @@ export const createOrder = async (req: Request, res: Response) => {
     // Emit socket events
     emitToAdmin("order:new", { order });
     emitToUser(userId, "order:confirmed", { orderId: order.id, estimatedDelivery });
+
+    // Check for low stock after order (stock was decremented)
+    checkAndNotifyLowStock(storeId);
 
     return successResponse(res, {
       ...order,

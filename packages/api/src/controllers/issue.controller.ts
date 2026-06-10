@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { successResponse, errorResponse } from "../utils/response";
 import { uploadImage } from "../services/upload.service";
+import { getEffectiveStoreId } from "../middleware/auth.middleware";
 import { logger } from "../utils/logger";
 
 // 10 minutes post-delivery window for instant-shopping apps
@@ -190,8 +191,13 @@ export const getOrderIssues = async (req: Request, res: Response) => {
 export const getAllIssues = async (req: Request, res: Response) => {
   try {
     const { status, page = "1", limit = "20" } = req.query;
+    const storeId = getEffectiveStoreId(req);
+
     const where: any = {};
     if (status) where.status = status;
+    if (storeId) {
+      where.order = { storeId };
+    }
 
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
@@ -233,6 +239,8 @@ export const getAllIssues = async (req: Request, res: Response) => {
 export const getIssueDetail = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const storeId = getEffectiveStoreId(req);
+
     const issue = await prisma.orderIssue.findUnique({
       where: { id },
       include: {
@@ -248,6 +256,12 @@ export const getIssueDetail = async (req: Request, res: Response) => {
       },
     });
     if (!issue) return errorResponse(res, "Issue not found", 404);
+
+    // STORE_ADMIN can only view issues from their store's orders
+    if (storeId && issue.order.storeId !== storeId) {
+      return errorResponse(res, "Issue not found", 404);
+    }
+
     return successResponse(res, issue);
   } catch (error) {
     logger.error("Get issue detail error:", error);

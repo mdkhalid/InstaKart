@@ -69,4 +69,9 @@ instamart_spec.md
 suggestion.md
 zepto_analysis.md
 
-# Prisma
+# Prisma generated client (schema is tracked)
+node_modules/.prisma
+
+# API local dev db
+*.db
+*.db-journal

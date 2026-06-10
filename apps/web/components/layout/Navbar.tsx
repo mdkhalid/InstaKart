@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { useWishlistStore } from "@/stores/wishlistStore";
+import { useStoreStore } from "@/stores/storeStore";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { StoreSelector } from "@/components/StoreSelector";
 
@@ -21,8 +22,10 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const { detectByPincode, loading: storeLoading } = useStoreStore();
   const [location, setLocation] = useState("");
   const [editingLocation, setEditingLocation] = useState(false);
+  const pincodeInputRef = useRef<HTMLInputElement>(null);
 
   // Load saved pincode from localStorage after hydration to avoid SSR mismatch
   useEffect(() => {
@@ -33,7 +36,15 @@ export function Navbar() {
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, "").slice(0, 6);
     setLocation(value);
-    localStorage.setItem("deliveryPincode", value);
+  };
+
+  const applyPincode = () => {
+    const pincode = location.trim();
+    if (pincode.length === 6) {
+      localStorage.setItem("deliveryPincode", pincode);
+      detectByPincode(pincode);
+      setEditingLocation(false);
+    }
   };
 
   useEffect(() => {
@@ -60,6 +71,13 @@ export function Navbar() {
     };
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
+  }, []);
+
+  // Listen for custom event to open pincode input from elsewhere (e.g., unserviceable banner)
+  useEffect(() => {
+    const handler = () => setEditingLocation(true);
+    window.addEventListener("open-pincode-input", handler);
+    return () => window.removeEventListener("open-pincode-input", handler);
   }, []);
 
   const handleLogout = async () => {
@@ -91,6 +109,7 @@ export function Navbar() {
                 <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5">
                   <MapPin className="h-4 w-4 text-primary-600 flex-shrink-0" />
                   <input
+                    ref={pincodeInputRef}
                     type="text"
                     value={location}
                     onChange={handleLocationChange}
@@ -98,13 +117,18 @@ export function Navbar() {
                     maxLength={6}
                     className="w-24 bg-transparent text-xs text-gray-700 ml-1.5 outline-none placeholder:text-gray-400"
                     autoFocus
-                    onBlur={() => {
-                      if (!location) setEditingLocation(false);
-                    }}
+                    onBlur={() => applyPincode()}
                     onKeyDown={(e) => {
-                      if (e.key === "Escape") setEditingLocation(false);
+                      if (e.key === "Enter") {
+                        applyPincode();
+                      } else if (e.key === "Escape") {
+                        setEditingLocation(false);
+                      }
                     }}
                   />
+                  {storeLoading && (
+                    <div className="h-3 w-3 ml-1 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                  )}
                 </div>
               ) : location ? (
                 <button

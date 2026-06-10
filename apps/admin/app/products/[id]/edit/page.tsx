@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { CategorySelect } from "@/components/CategorySelect";
 import { ImageUploader, type ProductImage } from "@/components/ImageUploader";
+import { StoreProductManager, type StoreProductForm } from "@/components/StoreProductManager";
 import { PRODUCT_UNITS } from "@instamart/types";
 
 type ProductForm = {
@@ -19,6 +20,7 @@ type ProductForm = {
   description: string;
   shortDesc: string;
   isFeatured: boolean;
+  storeProducts: StoreProductForm[];
 };
 
 export default function EditProductPage() {
@@ -27,6 +29,7 @@ export default function EditProductPage() {
   const [form, setForm] = useState<ProductForm>({
     name: "", sku: "", price: "", salePrice: "", stock: "0", unit: "pcs",
     categoryId: "", description: "", shortDesc: "", isFeatured: false,
+    storeProducts: [],
   });
   const [images, setImages] = useState<ProductImage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +54,14 @@ export default function EditProductPage() {
         description: p.description || "",
         shortDesc: p.shortDesc || "",
         isFeatured: !!p.isFeatured,
+        storeProducts: (p.storeProducts || []).map((sp: any) => ({
+          storeId: sp.storeId,
+          price: sp.price ? String(sp.price) : "",
+          salePrice: sp.salePrice ? String(sp.salePrice) : "",
+          stock: String(sp.stock ?? 0),
+          lowStockAlert: String(sp.lowStockAlert ?? 10),
+          isAvailable: sp.isAvailable ?? false,
+        })),
       });
       setImages(
         (p.images || []).map((img: any) => ({
@@ -76,6 +87,17 @@ export default function EditProductPage() {
     }
     setSaving(true);
     try {
+      const storeProducts = form.storeProducts
+        .filter((sp) => sp.isAvailable && sp.price)
+        .map((sp) => ({
+          storeId: sp.storeId,
+          price: parseFloat(sp.price),
+          salePrice: sp.salePrice ? parseFloat(sp.salePrice) : null,
+          stock: parseInt(sp.stock || "0", 10),
+          lowStockAlert: parseInt(sp.lowStockAlert || "10", 10),
+          isAvailable: true,
+        }));
+
       await api.put(`/products/${params.id}`, {
         name: form.name,
         sku: form.sku,
@@ -87,6 +109,7 @@ export default function EditProductPage() {
         description: form.description || undefined,
         shortDesc: form.shortDesc || undefined,
         isFeatured: form.isFeatured,
+        storeProducts: storeProducts.length > 0 ? storeProducts : undefined,
       });
       toast.success("Product updated");
       router.push("/products");
@@ -211,6 +234,11 @@ export default function EditProductPage() {
             maxFiles={10}
           />
         </div>
+
+        <StoreProductManager
+          value={form.storeProducts}
+          onChange={(storeProducts) => setForm({ ...form, storeProducts })}
+        />
 
         <div className="flex items-center space-x-2">
           <input
