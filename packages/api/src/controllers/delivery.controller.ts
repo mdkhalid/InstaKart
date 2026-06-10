@@ -485,6 +485,40 @@ export const updateAssignmentStatus = async (req: Request, res: Response) => {
   }
 };
 
+export const deleteDeliveryPerson = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const storeId = getEffectiveStoreId(req);
+
+    const existing = await prisma.deliveryPerson.findUnique({ where: { id } });
+    if (!existing) return errorResponse(res, "Delivery person not found", 404);
+    if (storeId && existing.storeId !== storeId) return errorResponse(res, "Delivery person not found", 404);
+
+    // Check for active assignments before deleting
+    const activeAssignment = await prisma.deliveryAssignment.findFirst({
+      where: { deliveryPersonId: id, status: { notIn: ["DELIVERED", "FAILED"] } },
+    });
+    if (activeAssignment) {
+      return errorResponse(res, "Cannot delete delivery person with active deliveries. Complete or reassign them first.", 400);
+    }
+
+    // Delete in a transaction — remove activity logs and assignments, then the person
+    await prisma.$transaction(async (tx) => {
+      await tx.deliveryActivity.deleteMany({ where: { deliveryPersonId: id } });
+      await tx.deliveryAssignment.deleteMany({ where: { deliveryPersonId: id } });
+      await tx.deliveryPerson.delete({ where: { id } });
+    });
+
+    return successResponse(res, null, "Delivery person deleted");
+  } catch (error: any) {
+    if (error.code === "P2003" || error.code === "P2014") {
+      return errorResponse(res, "Cannot delete delivery person due to existing records. Remove related data first.", 400);
+    }
+    logger.error("Delete delivery person error:", error);
+    return errorResponse(res, "Failed to delete delivery person", 500);
+  }
+};
+
 // ─────────────────────── ACTIVITY & STATS ───────────────────────
 
 export const getDeliveryPersonActivity = async (req: Request, res: Response) => {

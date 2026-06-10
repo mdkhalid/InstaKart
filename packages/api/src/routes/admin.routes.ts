@@ -13,7 +13,7 @@ import {
 import { getAllIssues, getIssueDetail, resolveIssue } from "../controllers/issue.controller";
 import {
   listDeliveryPersons, getDeliveryPerson, createDeliveryPerson, updateDeliveryPerson,
-  toggleDeliveryPersonStatus, getAvailableDeliveryPersons,
+  toggleDeliveryPersonStatus, deleteDeliveryPerson, getAvailableDeliveryPersons,
   assignDeliveryPerson, updateAssignmentStatus,
   getDeliveryPersonActivity, getDeliveryStats,
 } from "../controllers/delivery.controller";
@@ -59,6 +59,7 @@ router.get("/delivery-persons/:id", getDeliveryPerson);
 router.post("/delivery-persons", createDeliveryPerson);
 router.put("/delivery-persons/:id", updateDeliveryPerson);
 router.put("/delivery-persons/:id/status", toggleDeliveryPersonStatus);
+router.delete("/delivery-persons/:id", deleteDeliveryPerson);
 router.get("/delivery-persons/:id/activity", getDeliveryPersonActivity);
 
 // ── Delivery Assignments ──

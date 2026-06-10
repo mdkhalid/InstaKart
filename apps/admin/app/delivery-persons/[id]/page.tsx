@@ -4,11 +4,13 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, Phone, Mail, Bike, Star, Clock,
-  RefreshCw, CheckCircle, Pencil,
+  RefreshCw, CheckCircle, Pencil, Trash2,
   Navigation, Award, IndianRupee, Activity,
 } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatPrice, formatDate, formatDateTime } from "@/lib/utils";
+import { useConfirm } from "@/hooks/useConfirm";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 
@@ -115,6 +117,7 @@ const VEHICLE_ICONS: Record<string, string> = {
 export default function DeliveryPersonDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { confirm, dialogProps } = useConfirm();
   const [person, setPerson] = useState<DeliveryPerson | null>(null);
   const [activity, setActivity] = useState<{ activities: DailyActivity[]; summary: ActivitySummary } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -148,6 +151,26 @@ export default function DeliveryPersonDetailPage() {
   const completionRate = person && person.totalDeliveries > 0
     ? Math.round((person.totalDeliveries / Math.max(person._count.assignments, 1)) * 100)
     : 0;
+
+  const handleDelete = async () => {
+    const confirmed = await confirm({
+      title: "Delete Delivery Person",
+      message: `Are you sure you want to delete ${person?.firstName} ${person?.lastName}? This action cannot be undone and will remove all their activity logs and completed assignment records.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/admin/delivery-persons/${params.id}`);
+      toast.success("Delivery person deleted");
+      router.push("/delivery-persons");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to delete delivery person";
+      toast.error(msg);
+    }
+  };
 
   // Loading state
   if (loading) {
@@ -254,6 +277,13 @@ export default function DeliveryPersonDetailPage() {
             className="inline-flex items-center px-3 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
             <Pencil className="h-4 w-4 mr-1" /> Edit
+          </button>
+          <button
+            onClick={handleDelete}
+            className="inline-flex items-center px-3 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+            title="Delete delivery person"
+          >
+            <Trash2 className="h-4 w-4 mr-1" /> Delete
           </button>
           <button
             onClick={fetchPerson}
@@ -587,6 +617,8 @@ export default function DeliveryPersonDetailPage() {
           </div>
         </div>
       </div>
+
+      {dialogProps && <ConfirmDialog {...dialogProps} />}
     </div>
   );
 }
