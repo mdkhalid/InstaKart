@@ -52,7 +52,17 @@ uploads/
 # Bulk seed/product images (too large for git; re-run scripts to populate)
 apps/web/public/images/
 
+# AI agent configs
+.commandcode/
+
 # Internal review notes (not for public distribution)
 REVIEW.md
+IMPLEMENTATION_SUMMARY.md
+PRODUCTION_CHECKLIST.md
+START.md
+feature_suggestions_based_on_zepto.md
+instamart_spec.md
+suggestion.md
+zepto_analysis.md
 
 # Prisma
