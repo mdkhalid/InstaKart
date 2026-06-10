@@ -52,6 +52,10 @@ uploads/
 # Bulk seed/product images (too large for git; re-run scripts to populate)
 apps/web/public/images/
 
+# Large seed data files (regenerate locally if needed)
+scripts/spar-products.json
+scripts/seed-images-manifest-spar.json
+
 # AI agent configs
 .commandcode/
 
