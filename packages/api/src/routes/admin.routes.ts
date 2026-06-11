@@ -7,7 +7,7 @@ import {
   updateUser, resetUserPassword, uploadUserAvatar,
   getCoupons, createCoupon, updateCoupon, deleteCoupon,
   getAnalytics,
-  adminListProducts, adminGetProduct,
+  adminListProducts, adminGetProduct, adminListStores,
   getLowStockProducts,
 } from "../controllers/admin.controller";
 import { getAllIssues, getIssueDetail, resolveIssue } from "../controllers/issue.controller";
@@ -24,6 +24,7 @@ router.use(authenticate, requireAdmin);
 
 // ── Store-scoped routes (accessible by SUPER_ADMIN and STORE_ADMIN) ──
 router.get("/dashboard", getDashboard);
+router.get("/stores", adminListStores);
 router.get("/low-stock", getLowStockProducts);
 router.get("/orders", getAllOrders);
 router.get("/orders/:id", getOrderDetail);

@@ -18,7 +18,7 @@ export function StoreFilter({ value, onChange }: StoreFilterProps) {
   const [stores, setStores] = useState<StoreOption[]>([]);
 
   useEffect(() => {
-    api.get("/stores").then((res) => {
+    api.get("/admin/stores").then((res) => {
       setStores(res.data.data || []);
     }).catch(() => {});
   }, []);

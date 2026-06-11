@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Edit, ToggleLeft, Trash2 } from "lucide-react";
+import { Plus, Edit, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StoreFilter } from "@/components/StoreFilter";
@@ -104,8 +104,13 @@ export default function ProductsPage() {
           <button
             onClick={() => toggleProduct(row.id, row.isActive)}
             className="p-1 hover:bg-gray-100 rounded"
+            title={row.isActive ? "Deactivate" : "Activate"}
           >
-            <ToggleLeft className="h-4 w-4" />
+            {row.isActive ? (
+              <ToggleRight className="h-4 w-4 text-green-600" />
+            ) : (
+              <ToggleLeft className="h-4 w-4 text-gray-400" />
+            )}
           </button>
           <button
             onClick={() => deleteProduct(row.id)}

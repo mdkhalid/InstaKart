@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Edit, MapPin, ToggleLeft } from "lucide-react";
+import { Plus, Edit, MapPin, ToggleLeft, ToggleRight } from "lucide-react";
 import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -22,7 +22,7 @@ export default function StoresPage() {
 
   const fetchStores = async () => {
     try {
-      const { data } = await api.get("/stores");
+      const { data } = await api.get("/admin/stores");
       setStores(data.data || []);
     } catch {
       toast.error("Failed to load stores");
@@ -89,8 +89,13 @@ export default function StoresPage() {
           <button
             onClick={() => toggleStore(row.id, row.isActive)}
             className="p-1 hover:bg-gray-100 rounded"
+            title={row.isActive ? "Deactivate" : "Activate"}
           >
-            <ToggleLeft className="h-4 w-4" />
+            {row.isActive ? (
+              <ToggleRight className="h-4 w-4 text-green-600" />
+            ) : (
+              <ToggleLeft className="h-4 w-4 text-gray-400" />
+            )}
           </button>
         </div>
       ),

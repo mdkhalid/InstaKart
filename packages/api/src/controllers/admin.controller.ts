@@ -894,6 +894,24 @@ export const adminGetProduct = async (req: Request, res: Response) => {
   }
 };
 
+// Admin: list all stores (including inactive)
+export const adminListStores = async (_req: Request, res: Response) => {
+  try {
+    const stores = await prisma.store.findMany({
+      orderBy: { name: "asc" },
+    });
+    const enriched = stores.map((s) => ({
+      ...s,
+      deliveryFee: Number(s.deliveryFee),
+      minOrderAmount: Number(s.minOrderAmount),
+    }));
+    return successResponse(res, enriched);
+  } catch (error) {
+    logger.error("Admin list stores error:", error);
+    return errorResponse(res, "Failed to list stores", 500);
+  }
+};
+
 // ─────────────────────── Low Stock ───────────────────────
 
 export const getLowStockProducts = async (req: Request, res: Response) => {

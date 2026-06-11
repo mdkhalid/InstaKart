@@ -26,6 +26,7 @@ interface DeliveryPerson {
   totalEarnings: number;
   joinedAt: string;
   _count: { assignments: number };
+  store: { id: string; name: string };
 }
 
 interface Pagination {
@@ -234,6 +235,7 @@ export default function DeliveryPersonsPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Name</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Store</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Phone</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Type</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Vehicle</th>
@@ -246,11 +248,11 @@ export default function DeliveryPersonsPage() {
               <tbody className="divide-y divide-gray-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-500">Loading...</td>
+                    <td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-500">Loading...</td>
                   </tr>
                 ) : persons.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-500">No delivery persons found</td>
+                    <td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-500">No delivery persons found</td>
                   </tr>
                 ) : (
                   persons.map((person) => (
@@ -269,6 +271,9 @@ export default function DeliveryPersonsPage() {
                             )}
                           </div>
                         </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-gray-600">{person.store?.name || "—"}</span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 text-sm text-gray-600">

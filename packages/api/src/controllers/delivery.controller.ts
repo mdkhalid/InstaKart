@@ -36,6 +36,7 @@ export const listDeliveryPersons = async (req: Request, res: Response) => {
         orderBy: { createdAt: "desc" },
         include: {
           _count: { select: { assignments: true } },
+          store: { select: { id: true, name: true } },
         },
       }),
       prisma.deliveryPerson.count({ where }),
@@ -222,13 +223,13 @@ export const toggleDeliveryPersonStatus = async (req: Request, res: Response) =>
 export const getAvailableDeliveryPersons = async (req: Request, res: Response) => {
   try {
     const storeId = getEffectiveStoreId(req);
-    if (!storeId) return errorResponse(res, "Store ID required", 400);
 
-    // Only include truly available persons — ACTIVE status AND no active (non-completed) assignments
+    const personWhere: any = { status: "ACTIVE" };
+    if (storeId) personWhere.storeId = storeId;
+
     const persons = await prisma.deliveryPerson.findMany({
       where: {
-        storeId,
-        status: "ACTIVE",
+        ...personWhere,
         assignments: { none: { status: { notIn: ["DELIVERED", "FAILED"] } } },
       },
       select: {
@@ -245,9 +246,7 @@ export const getAvailableDeliveryPersons = async (req: Request, res: Response) =
     logger.error("Get available delivery persons error:", error);
     return errorResponse(res, "Failed to get available delivery persons", 500);
   }
-};
-
-export const assignDeliveryPerson = async (req: Request, res: Response) => {
+};export const assignDeliveryPerson = async (req: Request, res: Response) => {
   try {
     const { id: orderId } = req.params;
     const { deliveryPersonId } = req.body;
@@ -295,12 +294,17 @@ export const assignDeliveryPerson = async (req: Request, res: Response) => {
         },
       });
 
-      // Add status history entry
-      await tx.orderStatusHistory.create({
+      // Update order status to OUT_FOR_DELIVERY
+      await tx.order.update({
+        where: { id: orderId },
         data: {
-          orderId,
-          status: order.status,
-          note: `Assigned to delivery person: ${person.firstName} ${person.lastName} (${person.phone})`,
+          status: "OUT_FOR_DELIVERY",
+          statusHistory: {
+            create: {
+              status: "OUT_FOR_DELIVERY",
+              note: `Assigned to delivery person: ${person.firstName} ${person.lastName} (${person.phone})`,
+            },
+          },
         },
       });
 
@@ -442,6 +446,19 @@ export const updateAssignmentStatus = async (req: Request, res: Response) => {
 
       }
 
+      // Update order status for delivery progress
+      if (status === "PICKED_UP" || status === "IN_TRANSIT") {
+        await tx.order.update({
+          where: { id: assignment.orderId },
+          data: {
+            status: "OUT_FOR_DELIVERY",
+            statusHistory: {
+              create: { status: "OUT_FOR_DELIVERY", note: notes || `Order ${status.toLowerCase().replace("_", " ")}` },
+            },
+          },
+        });
+      }
+
       // Update order status if delivered
       if (status === "DELIVERED") {
         await tx.order.update({
@@ -471,6 +488,12 @@ export const updateAssignmentStatus = async (req: Request, res: Response) => {
     });
 
     // Emit socket events
+    if (status === "PICKED_UP" || status === "IN_TRANSIT") {
+      emitToUser(assignment.order.userId, "order:out_for_delivery", {
+        orderId: assignment.orderId,
+        status: "OUT_FOR_DELIVERY",
+      });
+    }
     if (status === "DELIVERED") {
       emitToUser(assignment.order.userId, "order:delivered", {
         orderId: assignment.orderId,

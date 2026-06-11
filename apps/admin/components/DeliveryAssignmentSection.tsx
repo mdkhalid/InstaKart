@@ -75,13 +75,21 @@ export default function DeliveryAssignmentSection({
     }
   }, [canAssign]);
 
+  const getOrderStoreId = () => {
+    return order?.store?.id || order?.storeId || order?.store?.storeId;
+  };
+
   const fetchAvailablePersons = async () => {
     setLoadingAvailable(true);
     try {
       // Pass the order's storeId so SUPER_ADMIN users can scope the query
-      const storeId = order?.store?.id || order?.storeId;
-      const params = storeId ? `?storeId=${storeId}` : "";
-      const { data } = await api.get(`/admin/delivery-persons/available${params}`);
+      const storeId = getOrderStoreId();
+      if (!storeId) {
+        toast.error("Order has no store assigned");
+        setLoadingAvailable(false);
+        return;
+      }
+      const { data } = await api.get(`/admin/delivery-persons/available?storeId=${storeId}`);
       setAvailablePersons(data.data || []);
       if (data.data?.length > 0) {
         setSelectedPersonId(data.data[0].id);

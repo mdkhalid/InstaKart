@@ -25,18 +25,13 @@ const app = express();
 
 // Security
 app.use(helmet());
-const defaultOrigins = [
-  "http://localhost:3000",
-  "http://localhost:3001",
-];
-const corsOrigins = (process.env.CLIENT_URL
-  ? process.env.CLIENT_URL.split(",").map((s) => s.trim())
-  : defaultOrigins
-).filter(Boolean);
-
 app.use(
   cors({
-    origin: corsOrigins,
+    origin: process.env.NODE_ENV === "production"
+      ? (process.env.CLIENT_URL
+          ? process.env.CLIENT_URL.split(",").map((s) => s.trim()).filter(Boolean)
+          : ["http://localhost:3000", "http://localhost:3001"])
+      : true,
     credentials: true,
   })
 );

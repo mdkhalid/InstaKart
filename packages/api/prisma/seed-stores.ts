@@ -145,13 +145,94 @@ async function main() {
   console.log(`  Store Admin 2: store-admin-delhi@instamart.com / Store@123`);
   console.log(`  Customer:      customer@example.com / Customer@123`);
 
-  // ── Create Delivery Persons ──
+  // ── Create Additional Stores ──
+  const mainStore = await prisma.store.upsert({
+    where: { slug: "main-store" },
+    update: {},
+    create: {
+      name: "Main Store",
+      slug: "main-store",
+      addressLine1: "1, Main Street",
+      city: "Mumbai",
+      state: "Maharashtra",
+      pincode: "400001",
+      lat: 19.076,
+      lng: 72.8777,
+      phone: "+91-9876543200",
+      email: "main@instamart.com",
+      deliveryRadiusKm: 15,
+      deliveryFee: 30,
+      minOrderAmount: 49,
+      openingTime: "07:00",
+      closingTime: "23:00",
+    },
+  });
+  console.log(`  ✅ Store: ${mainStore.name}`);
+
+  const instakartMumbai = await prisma.store.upsert({
+    where: { slug: "instakart-mumbai" },
+    update: {},
+    create: {
+      name: "InstaKart Mumbai",
+      slug: "instakart-mumbai",
+      addressLine1: "42, Linking Road",
+      city: "Mumbai",
+      state: "Maharashtra",
+      pincode: "400050",
+      lat: 19.0596,
+      lng: 72.8295,
+      phone: "+91-9876543220",
+      email: "mumbai@instakart.com",
+      deliveryRadiusKm: 8,
+      deliveryFee: 35,
+      minOrderAmount: 99,
+      openingTime: "08:00",
+      closingTime: "22:00",
+    },
+  });
+  console.log(`  ✅ Store: ${instakartMumbai.name}`);
+
+  const instakartDelhi = await prisma.store.upsert({
+    where: { slug: "instakart-delhi" },
+    update: {},
+    create: {
+      name: "InstaKart Delhi",
+      slug: "instakart-delhi",
+      addressLine1: "55, Janpath",
+      city: "Delhi",
+      state: "Delhi",
+      pincode: "110001",
+      lat: 28.6289,
+      lng: 77.2145,
+      phone: "+91-9876543221",
+      email: "delhi@instakart.com",
+      deliveryRadiusKm: 10,
+      deliveryFee: 45,
+      minOrderAmount: 99,
+      openingTime: "08:00",
+      closingTime: "22:00",
+    },
+  });
+  console.log(`  ✅ Store: ${instakartDelhi.name}`);
+
+  // ── Create Delivery Persons for all stores ──
   const deliveryPersons = [
+    // InstaMart Mumbai (store1)
     { storeId: store1.id, firstName: "Rajesh", lastName: "Kumar", phone: "9876543211", type: "FULL_TIME" as const, vehicleType: "BIKE" as const, vehicleNumber: "MH-01-AB-1234", monthlySalary: 18000 },
     { storeId: store1.id, firstName: "Suresh", lastName: "Patel", phone: "9876543212", type: "FULL_TIME" as const, vehicleType: "SCOOTER" as const, vehicleNumber: "MH-02-CD-5678", monthlySalary: 15000 },
     { storeId: store1.id, firstName: "Amit", lastName: "Sharma", phone: "9876543213", type: "PART_TIME" as const, vehicleType: "BIKE" as const, hourlyRate: 120 },
+    // InstaMart Delhi (store2)
     { storeId: store2.id, firstName: "Vijay", lastName: "Singh", phone: "9876543214", type: "FULL_TIME" as const, vehicleType: "BIKE" as const, vehicleNumber: "DL-03-EF-9012", monthlySalary: 17000 },
     { storeId: store2.id, firstName: "Ravi", lastName: "Verma", phone: "9876543215", type: "PART_TIME" as const, vehicleType: "SCOOTER" as const, hourlyRate: 110 },
+    // Main Store
+    { storeId: mainStore.id, firstName: "Arjun", lastName: "Mehta", phone: "9876543216", type: "FULL_TIME" as const, vehicleType: "BIKE" as const, vehicleNumber: "MH-04-GH-3456", monthlySalary: 20000 },
+    { storeId: mainStore.id, firstName: "Priya", lastName: "Shah", phone: "9876543217", type: "FULL_TIME" as const, vehicleType: "SCOOTER" as const, vehicleNumber: "MH-05-IJ-7890", monthlySalary: 16000 },
+    // InstaKart Mumbai
+    { storeId: instakartMumbai.id, firstName: "Deepak", lastName: "Joshi", phone: "9876543218", type: "FULL_TIME" as const, vehicleType: "BIKE" as const, vehicleNumber: "MH-06-KL-1234", monthlySalary: 17500 },
+    { storeId: instakartMumbai.id, firstName: "Neha", lastName: "Gupta", phone: "9876543219", type: "PART_TIME" as const, vehicleType: "WALK" as const, hourlyRate: 100 },
+    // InstaKart Delhi
+    { storeId: instakartDelhi.id, firstName: "Rohit", lastName: "Malik", phone: "9876543220", type: "FULL_TIME" as const, vehicleType: "SCOOTER" as const, vehicleNumber: "DL-07-MN-5678", monthlySalary: 16500 },
+    { storeId: instakartDelhi.id, firstName: "Anjali", lastName: "Agarwal", phone: "9876543221", type: "PART_TIME" as const, vehicleType: "BIKE" as const, hourlyRate: 115 },
   ];
 
   let dpCount = 0;

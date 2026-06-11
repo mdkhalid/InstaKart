@@ -16,6 +16,7 @@ export const createStoreSchema = z.object({
   deliveryRadiusKm: z.number().min(0).default(5),
   deliveryFee: z.number().min(0).default(0),
   minOrderAmount: z.number().min(0).default(0),
+  isActive: z.boolean().optional(),
 });
 
 export const updateStoreSchema = createStoreSchema.partial();

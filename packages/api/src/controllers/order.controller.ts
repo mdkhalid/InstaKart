@@ -21,7 +21,7 @@ function buildItemMeta(product: any, sp: any) {
 
 export const createOrder = async (req: Request, res: Response) => {
   try {
-    const { addressId, paymentMethod = "COD", couponCode, notes, estimatedDelivery: preferredDelivery } = req.body;
+    const { addressId, paymentMethod = "COD", couponCode, notes, estimatedDelivery: preferredDelivery, storeId: bodyStoreId } = req.body;
     const userId = req.user!.userId;
 
     // Get cart
@@ -34,7 +34,7 @@ export const createOrder = async (req: Request, res: Response) => {
       return errorResponse(res, "Cart is empty", 400);
     }
 
-    const storeId = cart.storeId;
+    const storeId = bodyStoreId || cart.storeId;
 
     // Fetch full cart with store products (if store-scoped)
     const fullCart = await prisma.cart.findUnique({
@@ -286,6 +286,13 @@ export const getOrder = async (req: Request, res: Response) => {
         items: true,
         address: true,
         statusHistory: { orderBy: { createdAt: "asc" } },
+        deliveryAssignment: {
+          include: {
+            deliveryPerson: {
+              select: { firstName: true, lastName: true, phone: true, vehicleType: true, vehicleNumber: true },
+            },
+          },
+        },
       },
     });
 

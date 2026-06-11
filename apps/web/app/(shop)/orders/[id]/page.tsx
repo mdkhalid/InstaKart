@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, CreditCard, AlertCircle, Clock, CheckCircle2, XCircle, RotateCcw, Image as ImageIcon, RefreshCw } from "lucide-react";
+import { ArrowLeft, MapPin, CreditCard, AlertCircle, Clock, CheckCircle2, XCircle, RotateCcw, Image as ImageIcon, RefreshCw, Truck } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { IssueReportModal } from "@/components/order/IssueReportModal";
 import { formatPrice, formatDate, formatDateTime, cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useConfirm } from "@/hooks/useConfirm";
+import { useSocket } from "@/hooks/useSocket";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -53,6 +54,55 @@ export default function OrderDetailPage() {
   const [issueWindow, setIssueWindow] = useState<{ canReportNew: boolean; windowExpiresAt: string | null; windowMinutes: number }>({ canReportNew: false, windowExpiresAt: null, windowMinutes: 10 });
   const [showIssueModal, setShowIssueModal] = useState(false);
   const { confirm, dialogProps } = useConfirm();
+  const { on } = useSocket();
+
+  // Listen for real-time delivery assignment
+  useEffect(() => {
+    if (!params?.id) return;
+    const cleanup = on("delivery:assigned", (data: any) => {
+      if (data.orderId !== params.id) return;
+      setOrder((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          status: "OUT_FOR_DELIVERY",
+          deliveryAssignment: {
+            deliveryPerson: {
+              name: data.deliveryPerson.name,
+              phone: data.deliveryPerson.phone,
+              vehicleType: data.deliveryPerson.vehicleType,
+              vehicleNumber: data.deliveryPerson.vehicleNumber,
+            },
+            status: "ASSIGNED",
+          },
+        };
+      });
+    });
+    return cleanup;
+  }, [params?.id, on]);
+
+  // Listen for order status updates from delivery progress
+  useEffect(() => {
+    if (!params?.id) return;
+    const cleanupOutForDelivery = on("order:out_for_delivery", (data: any) => {
+      if (data.orderId !== params.id) return;
+      setOrder((prev: any) => {
+        if (!prev) return prev;
+        return { ...prev, status: "OUT_FOR_DELIVERY" };
+      });
+    });
+    const cleanupDelivered = on("order:delivered", (data: any) => {
+      if (data.orderId !== params.id) return;
+      setOrder((prev: any) => {
+        if (!prev) return prev;
+        return { ...prev, status: "DELIVERED", deliveredAt: data.deliveredAt };
+      });
+    });
+    return () => {
+      cleanupOutForDelivery();
+      cleanupDelivered();
+    };
+  }, [params?.id, on]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -169,8 +219,48 @@ export default function OrderDetailPage() {
 
         {/* Status Tracker */}
         <div className="bg-white border rounded-xl p-6 mb-6">
-          <OrderTracker currentStatus={order.status} cancelled={order.status === "CANCELLED"} />
+          <OrderTracker
+            currentStatus={order.status}
+            cancelled={order.status === "CANCELLED"}
+            deliveryAssignment={order.deliveryAssignment}
+          />
         </div>
+
+        {/* Delivery Info */}
+        {order.deliveryAssignment && order.deliveryAssignment.status !== "FAILED" && (
+          <div className="bg-white border border-green-200 rounded-xl p-6 mb-6">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Truck className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-sm text-gray-900">Driver Assigned</h3>
+                  <Badge variant="success" className="text-xs">
+                    {order.deliveryAssignment.status === "ASSIGNED" && "On the way"}
+                    {order.deliveryAssignment.status === "PICKED_UP" && "Picked up"}
+                    {order.deliveryAssignment.status === "IN_TRANSIT" && "In transit"}
+                    {order.deliveryAssignment.status === "DELIVERED" && "Delivered"}
+                  </Badge>
+                </div>
+                <p className="text-sm font-medium text-gray-800">
+                  {order.deliveryAssignment.deliveryPerson.name || 
+                    `${order.deliveryAssignment.deliveryPerson.firstName} ${order.deliveryAssignment.deliveryPerson.lastName}`}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {order.deliveryAssignment.deliveryPerson.phone}
+                </p>
+                {(order.deliveryAssignment.deliveryPerson.vehicleType || order.deliveryAssignment.deliveryPerson.vehicleNumber) && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {[order.deliveryAssignment.deliveryPerson.vehicleType, order.deliveryAssignment.deliveryPerson.vehicleNumber]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Quick Reorder Panel */}
         {order.status !== "CANCELLED" && order.status !== "REFUNDED" && (

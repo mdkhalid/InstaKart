@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Bike, User } from "lucide-react";
 import { useStoreStore } from "../../../../web/stores/storeStore";
+import { StoreFilter } from "@/components/StoreFilter";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 
@@ -23,6 +24,7 @@ export default function NewDeliveryPersonPage() {
   const router = useRouter();
   const { currentStore } = useStoreStore();
   const [saving, setSaving] = useState(false);
+  const [storeId, setStoreId] = useState(currentStore?.id || "");
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -77,8 +79,8 @@ export default function NewDeliveryPersonPage() {
       }
 
       // Pass storeId so SUPER_ADMIN users can create persons in the selected store
-      if (currentStore?.id) {
-        payload.storeId = currentStore.id;
+      if (storeId) {
+        payload.storeId = storeId;
       }
 
       await api.post("/admin/delivery-persons", payload);
@@ -109,12 +111,11 @@ export default function NewDeliveryPersonPage() {
         <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
           <User className="h-5 w-5 text-primary-600" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-900">Add Delivery Person</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {currentStore ? `Store: ${currentStore.name}` : "Add a new delivery person to your team"}
-          </p>
+          <p className="text-sm text-gray-500 mt-0.5">Add a new delivery person to your team</p>
         </div>
+        <StoreFilter value={storeId} onChange={setStoreId} />
       </div>
 
       <form onSubmit={handleSubmit} className="max-w-2xl space-y-4">
