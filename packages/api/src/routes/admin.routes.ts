@@ -16,6 +16,7 @@ import {
   toggleDeliveryPersonStatus, deleteDeliveryPerson, getAvailableDeliveryPersons,
   assignDeliveryPerson, updateAssignmentStatus,
   getDeliveryPersonActivity, getDeliveryStats,
+  getMyProfile, getMyAssignments, getMyStats, getMyActivity, updateMyLocation, toggleMyStatus,
 } from "../controllers/delivery.controller";
 
 const router = Router();
@@ -53,6 +54,13 @@ router.put("/coupons/:id", requireSuperAdmin, updateCoupon);
 router.delete("/coupons/:id", requireSuperAdmin, deleteCoupon);
 
 // ── Delivery Management (store-scoped) ──
+// Agent Self-Service (mobile app)
+router.get("/delivery-persons/me", getMyProfile);
+router.get("/delivery-persons/me/assignments", getMyAssignments);
+router.get("/delivery-persons/me/stats", getMyStats);
+router.get("/delivery-persons/me/activity", getMyActivity);
+router.put("/delivery-persons/me/location", updateMyLocation);
+router.put("/delivery-persons/me/status", toggleMyStatus);
 router.get("/delivery-persons", listDeliveryPersons);
 router.get("/delivery-persons/available", getAvailableDeliveryPersons);
 router.get("/delivery-persons/stats", getDeliveryStats);

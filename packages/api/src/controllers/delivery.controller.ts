@@ -642,3 +642,205 @@ export const getDeliveryStats = async (req: Request, res: Response) => {
     return errorResponse(res, "Failed to get delivery stats", 500);
   }
 };
+
+// ─────────────────────── AGENT SELF-SERVICE ───────────────────────
+// These endpoints are used by delivery agents via the mobile app.
+// They use req.user.userId to find the agent's DeliveryPerson record.
+
+export const getMyProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return errorResponse(res, "Unauthorized", 401);
+
+    const person = await prisma.deliveryPerson.findUnique({
+      where: { userId },
+      include: {
+        store: { select: { id: true, name: true, addressLine1: true, city: true } },
+        _count: { select: { assignments: true } },
+      },
+    });
+
+    if (!person) return errorResponse(res, "Delivery profile not found", 404);
+
+    return successResponse(res, {
+      ...person,
+      hourlyRate: person.hourlyRate ? Number(person.hourlyRate) : null,
+      monthlySalary: person.monthlySalary ? Number(person.monthlySalary) : null,
+      totalEarnings: Number(person.totalEarnings),
+    });
+  } catch (error) {
+    logger.error("Get my profile error:", error);
+    return errorResponse(res, "Failed to get profile", 500);
+  }
+};
+
+export const getMyAssignments = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return errorResponse(res, "Unauthorized", 401);
+
+    const person = await prisma.deliveryPerson.findUnique({ where: { userId }, select: { id: true } });
+    if (!person) return errorResponse(res, "Delivery profile not found", 404);
+
+    const { status } = req.query;
+    const where: any = { deliveryPersonId: person.id };
+    if (status) where.status = status;
+
+    const assignments = await prisma.deliveryAssignment.findMany({
+      where,
+      orderBy: { assignedAt: "desc" },
+      include: {
+        order: {
+          select: {
+            id: true, orderNumber: true, status: true, total: true, paymentMethod: true, paymentStatus: true, createdAt: true,
+            address: { select: { street: true, city: true, landmark: true, lat: true, lng: true, label: true } },
+            store: { select: { id: true, name: true, lat: true, lng: true, addressLine1: true, city: true } },
+            user: { select: { firstName: true, lastName: true, phone: true } },
+            items: { select: { productName: true, quantity: true, totalPrice: true, productImage: true } },
+          },
+        },
+      },
+    });
+
+    return successResponse(res, assignments.map((a) => ({
+      ...a,
+      order: a.order ? { ...a.order, total: Number(a.order.total) } : null,
+    })));
+  } catch (error) {
+    logger.error("Get my assignments error:", error);
+    return errorResponse(res, "Failed to get assignments", 500);
+  }
+};
+
+export const getMyStats = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return errorResponse(res, "Unauthorized", 401);
+
+    const person = await prisma.deliveryPerson.findUnique({ where: { userId }, select: { id: true } });
+    if (!person) return errorResponse(res, "Delivery profile not found", 404);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [todayActivity, totalStats] = await Promise.all([
+      prisma.deliveryActivity.findUnique({
+        where: { deliveryPersonId_date: { deliveryPersonId: person.id, date: today } },
+      }),
+      prisma.deliveryPerson.findUnique({
+        where: { id: person.id },
+        select: { totalDeliveries: true, totalEarnings: true, rating: true },
+      }),
+    ]);
+
+    return successResponse(res, {
+      todayAssigned: todayActivity?.ordersAssigned || 0,
+      todayCompleted: todayActivity?.ordersCompleted || 0,
+      todayFailed: todayActivity?.ordersFailed || 0,
+      todayEarnings: todayActivity ? Number(todayActivity.earnings) : 0,
+      todayDistance: todayActivity?.distanceKm || 0,
+      totalDeliveries: totalStats?.totalDeliveries || 0,
+      totalEarnings: totalStats ? Number(totalStats.totalEarnings) : 0,
+      rating: totalStats?.rating || 5.0,
+    });
+  } catch (error) {
+    logger.error("Get my stats error:", error);
+    return errorResponse(res, "Failed to get stats", 500);
+  }
+};
+
+export const getMyActivity = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return errorResponse(res, "Unauthorized", 401);
+
+    const person = await prisma.deliveryPerson.findUnique({ where: { userId }, select: { id: true } });
+    if (!person) return errorResponse(res, "Delivery profile not found", 404);
+
+    const days = parseInt(req.query.days as string) || 30;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+
+    const activities = await prisma.deliveryActivity.findMany({
+      where: {
+        deliveryPersonId: person.id,
+        date: { gte: startDate },
+      },
+      orderBy: { date: "desc" },
+    });
+
+    return successResponse(res, activities.map((a) => ({
+      ...a,
+      earnings: Number(a.earnings),
+    })));
+  } catch (error) {
+    logger.error("Get my activity error:", error);
+    return errorResponse(res, "Failed to get activity", 500);
+  }
+};
+
+export const updateMyLocation = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return errorResponse(res, "Unauthorized", 401);
+
+    const { lat, lng } = req.body;
+    if (!lat || !lng) return errorResponse(res, "Latitude and longitude are required", 400);
+
+    const person = await prisma.deliveryPerson.findUnique({ where: { userId }, select: { id: true } });
+    if (!person) return errorResponse(res, "Delivery profile not found", 404);
+
+    await prisma.deliveryPerson.update({
+      where: { id: person.id },
+      data: {
+        currentLat: lat,
+        currentLng: lng,
+        lastLocationAt: new Date(),
+      },
+    });
+
+    return successResponse(res, null, "Location updated");
+  } catch (error) {
+    logger.error("Update my location error:", error);
+    return errorResponse(res, "Failed to update location", 500);
+  }
+};
+
+export const toggleMyStatus = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return errorResponse(res, "Unauthorized", 401);
+
+    const { status } = req.body;
+    if (!status || !["ACTIVE", "OFF_DUTY"].includes(status)) {
+      return errorResponse(res, "Invalid status. Use ACTIVE or OFF_DUTY", 400);
+    }
+
+    const person = await prisma.deliveryPerson.findUnique({ where: { userId }, select: { id: true } });
+    if (!person) return errorResponse(res, "Delivery profile not found", 404);
+
+    // Check if agent has active assignments before going off duty
+    if (status === "OFF_DUTY") {
+      const activeAssignments = await prisma.deliveryAssignment.count({
+        where: {
+          deliveryPersonId: person.id,
+          status: { notIn: ["DELIVERED", "FAILED"] },
+        },
+      });
+      if (activeAssignments > 0) {
+        return errorResponse(res, "Cannot go off duty with active deliveries", 400);
+      }
+    }
+
+    const updated = await prisma.deliveryPerson.update({
+      where: { id: person.id },
+      data: { status },
+    });
+
+    return successResponse(res, { status: updated.status }, `Status updated to ${status}`);
+  } catch (error) {
+    logger.error("Toggle my status error:", error);
+    return errorResponse(res, "Failed to update status", 500);
+  }
+};

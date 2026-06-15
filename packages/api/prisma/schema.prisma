@@ -188,6 +188,7 @@ model User {
   refreshTokens    RefreshToken[]
   passwordResets   PasswordReset[]
   issuesReported   OrderIssue[] @relation("IssueReporter")
+  deliveryPerson   DeliveryPerson?
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -538,6 +539,8 @@ model TrackingEvent {
 
 model DeliveryPerson {
   id                String               @id @default(cuid())
+  userId            String?             @unique
+  user              User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
   storeId           String
   store             Store                @relation(fields: [storeId], references: [id])
 
